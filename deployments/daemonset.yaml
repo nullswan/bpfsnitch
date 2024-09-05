@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: bpfsnitch-agent
+  namespace: kube-system
+  labels:
+    k8s-app: bpfsnitch-agent
+    kubernetes.io/cluster-service: "true"
+spec:
+  selector:
+    matchLabels:
+      k8s-app: bpfsnitch-agent
+      kubernetes.io/cluster-service: "true"
+  template:
+    metadata:
+      labels:
+        k8s-app: bpfsnitch-agent
+        kubernetes.io/cluster-service: "true"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - arm64
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - arm/v7
+      initContainers:
+        - name: mount-bpf-fs
+          image: alpine:3.20
+          command:
+            - /bin/sh
+            - "-c"
+            - "--"
+          args:
+            - >-
+              mount | grep "/sys/fs/bpf type bpf" || mount -t bpf bpf
+              /sys/fs/bpf
+          volumeMounts:
+            - name: bpf-maps
+              mountPath: /sys/fs/bpf
+              mountPropagation: Bidirectional
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: FallbackToLogsOnError
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+      containers:
+        - name: bpfsnitch-agent
+          image: bpfsnitch:latest
+          imagePullPolicy: Never
+          args:
+            - "/bin/sh"
+            - "-c"
+            - "./ebpf -kubernetes"
+          securityContext:
+            privileged: true
+            capabilities:
+              # TODO(v1): sort out the capabilities
+              add:
+                - CHOWN
+                - KILL
+                - NET_ADMIN
+                - NET_RAW
+                - IPC_LOCK
+                - SYS_MODULE
+                - SYS_ADMIN
+                - SYS_RESOURCE
+                - DAC_OVERRIDE
+                - FOWNER
+                - SETGID
+                - SETUID
+              drop:
+                - ALL
+          volumeMounts:
+            - name: bpf-maps
+              mountPath: /sys/fs/bpf
+              mountPropagation: HostToContainer
+            - name: kernel-trace
+              mountPath: /sys/kernel/tracing
+              mountPropagation: HostToContainer
+            - name: kernel-debug
+              mountPath: /sys/kernel/debug
+              mountPropagation: HostToContainer
+          # resources:
+          #   limits:
+          #     memory: "250Mi"
+          #     cpu: "100m"
+          #   requests:
+          #     memory: "250Mi"
+          #     cpu: "100m"
+      volumes:
+        - name: bpf-maps
+          hostPath:
+            path: /sys/fs/bpf
+            type: DirectoryOrCreate
