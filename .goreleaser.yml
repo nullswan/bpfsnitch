@@ -1,0 +1,21 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: bpfsnitch
+    goos:
+      - linux
+    goarch:
+      - arm
+      - arm64
+      - amd64
+    goarm:
+      - "7"
+    binary: bpfsnitch
+    main: ./cmd/bpfsnitch/main.go
+
+checksum:
+  algorithm: sha256

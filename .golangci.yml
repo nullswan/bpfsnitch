@@ -1,0 +1,60 @@
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - durationcheck
+    - errcheck
+    - exhaustive
+    - gocheckcompilerdirectives
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofumpt
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - mnd
+    - nilerr
+    - nilnil
+    - noctx
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - protogetter
+    - reassign
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - staticcheck
+    - thelper
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - unused
+    - usestdlibvars
+    - whitespace
+    - whitespace
+    - wrapcheck
+
+linters-settings:
+  exhaustive:
+    check:
+      - switch
+      - map
+    default-signifies-exhaustive: true
+    ignore-enum-members: ".+UNSPECIFIED"
+
+severity:
+  default-severity: error
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
