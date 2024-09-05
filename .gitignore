@@ -1,0 +1,4 @@
+dist/
+*.o
+TODO.md
+ARCH.md
