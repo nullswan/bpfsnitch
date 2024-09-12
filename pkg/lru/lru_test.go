@@ -6,6 +6,8 @@ import (
 )
 
 func TestLRUCache(t *testing.T) {
+	t.Parallel()
+
 	cache := New[int, int](2) // Create LRUCache with capacity of 2
 
 	cache.Put(1, 1)
@@ -49,6 +51,8 @@ func TestLRUCache(t *testing.T) {
 }
 
 func TestLRUCacheOverwrite(t *testing.T) {
+	t.Parallel()
+
 	cache := New[int, int](2)
 	cache.Put(1, 1)
 	cache.Put(1, 10)
@@ -62,6 +66,8 @@ func TestLRUCacheOverwrite(t *testing.T) {
 }
 
 func TestLRUCacheEvictionOrder(t *testing.T) {
+	t.Parallel()
+
 	cache := New[int, int](3)
 	cache.Put(1, 1)
 	cache.Put(2, 2)
@@ -74,6 +80,8 @@ func TestLRUCacheEvictionOrder(t *testing.T) {
 }
 
 func TestLRUCacheBoundaryUsage(t *testing.T) {
+	t.Parallel()
+
 	cache := New[int, int](1)
 	cache.Put(1, 1)
 	if value, found := cache.Get(1); !found || value != 1 {
@@ -97,6 +105,8 @@ func TestLRUCacheBoundaryUsage(t *testing.T) {
 }
 
 func TestLRUCacheZeroCapacity(t *testing.T) {
+	t.Parallel()
+
 	cache := New[int, int](0)
 	cache.Put(1, 1)
 	if value, found := cache.Get(1); !found || value != 1 {
@@ -122,6 +132,8 @@ func TestLRUCacheZeroCapacity(t *testing.T) {
 }
 
 func TestLRUCacheConcurrency(t *testing.T) {
+	t.Parallel()
+
 	cache := New[int, int](100) // Create LRUCache with capacity of 100
 	wg := sync.WaitGroup{}
 
@@ -166,6 +178,8 @@ func TestLRUCacheConcurrency(t *testing.T) {
 }
 
 func TestLRUCacheEvictionPattern(t *testing.T) {
+	t.Parallel()
+
 	cache := New[int, int](3)
 	cache.Put(1, 1)
 	cache.Put(2, 2)
@@ -200,6 +214,8 @@ func TestLRUCacheEvictionPattern(t *testing.T) {
 }
 
 func TestLRUCacheMultipleEvictions(t *testing.T) {
+	t.Parallel()
+
 	cache := New[int, int](2)
 	cache.Put(1, 1)
 	cache.Put(2, 2)

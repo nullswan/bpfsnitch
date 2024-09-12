@@ -3,6 +3,8 @@ package bpfarch
 import "testing"
 
 func TestSyscallDefs(t *testing.T) {
+	t.Parallel()
+
 	for name, number := range SyscallToId {
 		if mappedName, present := IdToSyscall[number]; !present ||
 			mappedName != name {
