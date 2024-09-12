@@ -5,7 +5,7 @@ package bpfarch
 
 const BpfProgramElf = bpfProgramName + "_amd64.o"
 
-var WhitelistedSyscalls = map[string]int{
+var SyscallToId = map[string]int{
 	"read":                   0,
 	"write":                  1,
 	"open":                   2,
@@ -341,7 +341,7 @@ var WhitelistedSyscalls = map[string]int{
 	"statx":                  332,
 }
 
-var WhitelistedSyscallsMap = map[int]string{
+var IdToSyscall = map[int]string{
 	0:   "read",
 	1:   "write",
 	2:   "open",
@@ -675,4 +675,56 @@ var WhitelistedSyscallsMap = map[int]string{
 	330: "pkey_alloc",
 	331: "pkey_free",
 	332: "statx",
+}
+
+var WhitelistedSyscalls = []int{
+	SyscallToId["clone"],
+	SyscallToId["fork"],
+	SyscallToId["vfork"],
+	SyscallToId["execve"],
+	SyscallToId["exit"],
+	SyscallToId["wait4"],
+	SyscallToId["kill"],
+	SyscallToId["ptrace"],
+	SyscallToId["setuid"],
+	SyscallToId["setgid"],
+	SyscallToId["seteuid"],
+	SyscallToId["setegid"],
+	SyscallToId["setpgid"],
+	SyscallToId["setresuid"],
+	SyscallToId["getresuid"],
+	SyscallToId["setresgid"],
+	SyscallToId["getresgid"],
+	SyscallToId["prctl"],
+	SyscallToId["arch_prctl"],
+	SyscallToId["capget"],
+	SyscallToId["capset"],
+	SyscallToId["seccomp"],
+	SyscallToId["setns"],
+	SyscallToId["unshare"],
+	SyscallToId["chroot"],
+	SyscallToId["pivot_root"],
+	SyscallToId["mknod"],
+	SyscallToId["mount"],
+	SyscallToId["umount2"],
+	SyscallToId["socket"],
+	SyscallToId["connect"],
+	SyscallToId["accept"],
+	SyscallToId["sendto"],
+	SyscallToId["recvfrom"],
+	SyscallToId["sendmsg"],
+	SyscallToId["recvmsg"],
+	SyscallToId["shutdown"],
+	SyscallToId["bind"],
+	SyscallToId["listen"],
+	SyscallToId["getsockname"],
+	SyscallToId["getpeername"],
+	SyscallToId["socketpair"],
+	SyscallToId["setsockopt"],
+	SyscallToId["getsockopt"],
+	SyscallToId["accept4"],
+	SyscallToId["sendmmsg"],
+	SyscallToId["getrandom"],
+	SyscallToId["mknodat"],
+	SyscallToId["fchownat"],
 }
