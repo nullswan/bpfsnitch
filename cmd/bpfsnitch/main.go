@@ -4,19 +4,22 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"unsafe"
 
 	"github.com/cilium/ebpf/perf"
-	"github.com/nullswan/bpfsentinel/internal/bpf"
-	bpfarch "github.com/nullswan/bpfsentinel/internal/bpf/arch"
-	"github.com/nullswan/bpfsentinel/internal/kube"
-	"github.com/nullswan/bpfsentinel/internal/logger"
-	"github.com/nullswan/bpfsentinel/internal/metrics"
+	"github.com/nullswan/bpfsnitch/internal/bpf"
+	bpfarch "github.com/nullswan/bpfsnitch/internal/bpf/arch"
+	"github.com/nullswan/bpfsnitch/internal/logger"
+	"github.com/nullswan/bpfsnitch/internal/metrics"
+	"github.com/nullswan/bpfsnitch/internal/workload"
+	"github.com/nullswan/bpfsnitch/pkg/lru"
 )
 
 const (
@@ -31,12 +34,16 @@ func main() {
 }
 
 func run() error {
-
+	var kubernetesMode bool
+	flag.BoolVar(&kubernetesMode, "kubernetes", false, "Enable Kubernetes mode")
 
 	flag.Parse()
 
 	log := logger.Init()
 
+	if kubernetesMode && !workload.IsSocketPresent() {
+		return fmt.Errorf("runtime socket not found")
+	}
 
 	bpfCtx, err := bpf.Attach(
 		log,
@@ -57,7 +64,7 @@ func run() error {
 			Info("Received signal, cancelling context")
 
 		cancel()
-		for _, kp := range bpfCtx.Kprobes {
+		for _, kp := range bpfCtx.Tps {
 			kp.Close()
 		}
 
@@ -71,18 +78,75 @@ func run() error {
 	syscallEventChan := make(chan *bpf.SyscallEvent)
 	go consumeEvents(ctx, log, bpfCtx.EventsReader, syscallEventChan)
 
+	shaResolver, err := workload.NewShaResolver()
+	if err != nil {
+		return fmt.Errorf("failed to create sha resolver: %w", err)
+	}
+
+	// TODO: LRU Cache
+	bannedCgroupIds := make(map[uint64]struct{})
+
+	pidToShaLRU := lru.New[uint64, string](1000)
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("Context done, exiting")
 			return nil
 		case event := <-syscallEventChan:
+			if _, ok := bannedCgroupIds[event.CgroupId]; ok {
+				continue
+			}
+
+			sha, ok := pidToShaLRU.Get(event.Pid)
+			if !ok {
+				fd, err := os.Open(fmt.Sprintf("/proc/%d/cgroup", event.Pid))
+				if err != nil {
+					log.With("error", err).
+						Error("Failed to open cgroup file")
+					continue
+				}
+				defer fd.Close()
+
+				content, err := io.ReadAll(fd)
+				if err != nil {
+					log.With("error", err).
+						Error("Failed to read cgroup file")
+					continue
+				}
+
+				contentStr := string(content)
+				if !strings.Contains(contentStr, "k8s.io") {
+					bannedCgroupIds[event.CgroupId] = struct{}{}
+					continue
+				}
+				sha = contentStr[strings.LastIndex(contentStr, "/")+1:]
+
+				// Prevent the last character from being a newline.
+				sha = sha[0 : len(sha)-1]
+
+				pidToShaLRU.Put(event.Pid, sha)
+			}
+
+			container, err := shaResolver.Resolve(sha)
+			if err != nil {
+				log.With("error", err).
+					With("sha", sha).
+					Error("Failed to resolve sha")
+
+				continue
+			}
+
+			log.With("syscall", event.GetSyscallName()).
+				With("pid", event.Pid).
+				With("cgroup_id", event.CgroupId).
+				With("container", container).
+				Debug("Received event")
 
 			metrics.SyscallCounter.
 				WithLabelValues(
 					event.GetSyscallName(),
-					fmt.Sprintf("%d", event.UserId),
-					fmt.Sprintf("%d", event.CgroupId)).
+					container,
+				).
 				Inc()
 		}
 	}
