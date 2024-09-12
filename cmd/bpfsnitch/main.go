@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"strings"
@@ -37,12 +39,17 @@ func run() error {
 	var kubernetesMode bool
 	flag.BoolVar(&kubernetesMode, "kubernetes", false, "Enable Kubernetes mode")
 
+	var enablePprof bool
+	flag.BoolVar(&enablePprof, "pprof", false, "Enable pprof")
+
 	flag.Parse()
 
 	log := logger.Init()
 
 	if kubernetesMode && !workload.IsSocketPresent() {
 		return fmt.Errorf("runtime socket not found")
+	} else if kubernetesMode {
+		log.Info("Kubernetes mode enabled")
 	}
 
 	bpfCtx, err := bpf.Attach(
@@ -73,14 +80,26 @@ func run() error {
 	}()
 
 	metrics.RegisterMetrics()
+	if enablePprof {
+		log.Info("pprof enabled")
+		http.HandleFunc("/debug/pprof/", pprof.Index)
+		http.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		http.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		http.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		http.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
+
 	go metrics.StartServer(log, cancel, prometheusPort)
 
 	syscallEventChan := make(chan *bpf.SyscallEvent)
 	go consumeEvents(ctx, log, bpfCtx.EventsReader, syscallEventChan)
 
-	shaResolver, err := workload.NewShaResolver()
-	if err != nil {
-		return fmt.Errorf("failed to create sha resolver: %w", err)
+	var shaResolver *workload.ShaResolver
+	if kubernetesMode {
+		shaResolver, err = workload.NewShaResolver()
+		if err != nil {
+			return fmt.Errorf("failed to create sha resolver: %w", err)
+		}
 	}
 
 	bannedCgroupIds := lru.New[uint64, struct{}](1000)
@@ -91,61 +110,78 @@ func run() error {
 			log.Info("Context done, exiting")
 			return nil
 		case event := <-syscallEventChan:
-			if _, ok := bannedCgroupIds.Get(event.CgroupId); ok {
-				continue
-			}
+			if kubernetesMode {
+				if _, ok := bannedCgroupIds.Get(event.CgroupId); ok {
+					continue
+				}
 
-			sha, ok := pidToShaLRU.Get(event.Pid)
-			if !ok {
-				fd, err := os.Open(fmt.Sprintf("/proc/%d/cgroup", event.Pid))
+				sha, ok := pidToShaLRU.Get(event.Pid)
+				if !ok {
+					fd, err := os.Open(
+						fmt.Sprintf("/proc/%d/cgroup", event.Pid),
+					)
+					if err != nil {
+						log.With("error", err).
+							Error("Failed to open cgroup file")
+						continue
+					}
+					defer fd.Close()
+
+					content, err := io.ReadAll(fd)
+					if err != nil {
+						log.With("error", err).
+							Error("Failed to read cgroup file")
+						continue
+					}
+
+					contentStr := string(content)
+					if !strings.Contains(contentStr, "k8s.io") {
+						bannedCgroupIds.Put(event.CgroupId, struct{}{})
+						continue
+					}
+					sha = contentStr[strings.LastIndex(contentStr, "/")+1:]
+
+					// Prevent the last character from being a newline.
+					sha = sha[0 : len(sha)-1]
+
+					pidToShaLRU.Put(event.Pid, sha)
+				}
+
+				container, err := shaResolver.Resolve(sha)
 				if err != nil {
 					log.With("error", err).
-						Error("Failed to open cgroup file")
-					continue
-				}
-				defer fd.Close()
+						With("sha", sha).
+						Error("Failed to resolve sha")
 
-				content, err := io.ReadAll(fd)
-				if err != nil {
-					log.With("error", err).
-						Error("Failed to read cgroup file")
 					continue
 				}
 
-				contentStr := string(content)
-				if !strings.Contains(contentStr, "k8s.io") {
-					bannedCgroupIds.Put(event.CgroupId, struct{}{})
-					continue
-				}
-				sha = contentStr[strings.LastIndex(contentStr, "/")+1:]
+				log.With("syscall", event.GetSyscallName()).
+					With("pid", event.Pid).
+					With("cgroup_id", event.CgroupId).
+					With("container", container).
+					Debug("Received event")
 
-				// Prevent the last character from being a newline.
-				sha = sha[0 : len(sha)-1]
+				metrics.SyscallCounter.
+					WithLabelValues(
+						event.GetSyscallName(),
+						container,
+					).
+					Inc()
 
-				pidToShaLRU.Put(event.Pid, sha)
+			} else {
+				log.With("syscall", event.GetSyscallName()).
+					With("pid", event.Pid).
+					With("cgroup_id", event.CgroupId).
+					Debug("Received event")
+
+				metrics.SyscallCounter.
+					WithLabelValues(
+						event.GetSyscallName(),
+						fmt.Sprintf("%d", event.Pid),
+					).
+					Inc()
 			}
-
-			container, err := shaResolver.Resolve(sha)
-			if err != nil {
-				log.With("error", err).
-					With("sha", sha).
-					Error("Failed to resolve sha")
-
-				continue
-			}
-
-			log.With("syscall", event.GetSyscallName()).
-				With("pid", event.Pid).
-				With("cgroup_id", event.CgroupId).
-				With("container", container).
-				Debug("Received event")
-
-			metrics.SyscallCounter.
-				WithLabelValues(
-					event.GetSyscallName(),
-					container,
-				).
-				Inc()
 		}
 	}
 }
