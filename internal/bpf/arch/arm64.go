@@ -5,8 +5,7 @@ package bpfarch
 
 const BpfProgramElf = bpfProgramName + "_arm64.o"
 
-// Map of whitelisted syscalls.
-var WhitelistedSyscalls = map[string]int{
+var SyscallToId = map[string]int{
 	"io_setup":               0,
 	"io_destroy":             1,
 	"io_submit":              2,
@@ -285,7 +284,7 @@ var WhitelistedSyscalls = map[string]int{
 	"statx":                  291,
 }
 
-var WhitelistedSyscallsMap = map[int]string{
+var IdToSyscall = map[int]string{
 	0:   "io_setup",
 	1:   "io_destroy",
 	2:   "io_submit",
@@ -562,4 +561,53 @@ var WhitelistedSyscallsMap = map[int]string{
 	289: "pkey_alloc",
 	290: "pkey_free",
 	291: "statx",
+}
+
+var WhitelistedSyscalls = []int{
+	SyscallToId["clone"],
+	SyscallToId["execve"],
+	SyscallToId["mknodat"],
+	SyscallToId["chroot"],
+	SyscallToId["mount"],
+	SyscallToId["umount2"],
+	SyscallToId["pivot_root"],
+	SyscallToId["setuid"],
+	SyscallToId["setgid"],
+	SyscallToId["setreuid"],
+	SyscallToId["setregid"],
+	SyscallToId["setresuid"],
+	SyscallToId["setresgid"],
+	SyscallToId["capget"],
+	SyscallToId["capset"],
+	SyscallToId["prctl"],
+	SyscallToId["seccomp"],
+	SyscallToId["setns"],
+	SyscallToId["unshare"],
+	SyscallToId["kill"],
+	SyscallToId["tkill"],
+	SyscallToId["tgkill"],
+	SyscallToId["socket"],
+	SyscallToId["bind"],
+	SyscallToId["connect"],
+	SyscallToId["listen"],
+	SyscallToId["accept"],
+	SyscallToId["accept4"],
+	SyscallToId["shutdown"],
+	SyscallToId["sendmsg"],
+	SyscallToId["recvmsg"],
+	SyscallToId["sendto"],
+	SyscallToId["recvfrom"],
+	SyscallToId["getsockopt"],
+	SyscallToId["setsockopt"],
+	SyscallToId["sendmmsg"],
+	SyscallToId["sethostname"],
+	SyscallToId["setdomainname"],
+	SyscallToId["wait4"],
+	SyscallToId["finit_module"],
+	SyscallToId["kexec_load"],
+	SyscallToId["capget"],
+	SyscallToId["capset"],
+	SyscallToId["syslog"],
+	SyscallToId["ptrace"],
+	SyscallToId["prctl"],
 }
