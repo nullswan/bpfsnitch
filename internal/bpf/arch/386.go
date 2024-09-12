@@ -5,7 +5,7 @@ package bpfarch
 
 const BpfProgramElf = bpfProgramName + "_x86.o"
 
-var WhitelistedSyscalls = map[string]int{
+var SyscallToId = map[string]int{
 	"restart_syscall":        0,
 	"exit":                   1,
 	"fork":                   2,
@@ -389,7 +389,7 @@ var WhitelistedSyscalls = map[string]int{
 	"arch_prctl":             384,
 }
 
-var WhitelistedSyscallsMap = map[int]string{
+var IdToSyscall = map[int]string{
 	0:   "restart_syscall",
 	1:   "exit",
 	2:   "fork",
@@ -771,4 +771,48 @@ var WhitelistedSyscallsMap = map[int]string{
 	382: "pkey_free",
 	383: "statx",
 	384: "arch_prctl",
+}
+
+var WhitelistedSyscalls = []int{
+	SyscallToId["execve"],
+	SyscallToId["ptrace"],
+	SyscallToId["fork"],
+	SyscallToId["vfork"],
+	SyscallToId["clone"],
+	SyscallToId["mknod"],
+	SyscallToId["chroot"],
+	SyscallToId["mount"],
+	SyscallToId["umount"],
+	SyscallToId["umount2"],
+	SyscallToId["setuid"],
+	SyscallToId["setgid"],
+	SyscallToId["setresuid"],
+	SyscallToId["setresgid"],
+	SyscallToId["getuid"],
+	SyscallToId["getgid"],
+	SyscallToId["geteuid"],
+	SyscallToId["getegid"],
+	SyscallToId["kill"],
+	SyscallToId["tkill"],
+	SyscallToId["prctl"],
+	SyscallToId["seccomp"],
+	SyscallToId["unshare"],
+	SyscallToId["setns"],
+	SyscallToId["capset"],
+	SyscallToId["capget"],
+	SyscallToId["socket"],
+	SyscallToId["bind"],
+	SyscallToId["connect"],
+	SyscallToId["listen"],
+	SyscallToId["accept"],
+	SyscallToId["shutdown"],
+	SyscallToId["setsockopt"],
+	SyscallToId["getsockopt"],
+	SyscallToId["recvmsg"],
+	SyscallToId["sendmsg"],
+	SyscallToId["recvfrom"],
+	SyscallToId["sendto"],
+	SyscallToId["getrandom"],
+	SyscallToId["mknodat"],
+	SyscallToId["fchownat"],
 }
