@@ -1,5 +1,4 @@
 package bpfarch
 
-// Must be up to date with bpf/build.sh
-// TODO: use an automated tag or something to keep this in sync
+// TODO: build with the same target as bpf/build.sh
 const bpfProgramName = "bpfsnitch_lib"
