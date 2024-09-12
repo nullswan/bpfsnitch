@@ -16,8 +16,8 @@ struct {
 struct syscall_event {
   long syscall_nr;
   u64 ts;
-  u64 user_id;
   u64 cgroup_id;
+  u64 pid;
 };
 
 struct {
