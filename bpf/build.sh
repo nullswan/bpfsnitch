@@ -37,4 +37,4 @@ case "$TARGETARCH" in
     ;;
 esac
 
-clang $CFLAGS $ARCH_FLAGS -c $SOURCE_FILE -o $OUTPUT_FILE
+clang $CFLAGS $ARCH_FLAGS -c $SOURCE_FILE -o $OUTPUT_FILE -I.
