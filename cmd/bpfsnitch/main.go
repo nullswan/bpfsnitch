@@ -83,9 +83,7 @@ func run() error {
 		return fmt.Errorf("failed to create sha resolver: %w", err)
 	}
 
-	// TODO: LRU Cache
-	bannedCgroupIds := make(map[uint64]struct{})
-
+	bannedCgroupIds := lru.New[uint64, struct{}](1000)
 	pidToShaLRU := lru.New[uint64, string](1000)
 	for {
 		select {
@@ -93,7 +91,7 @@ func run() error {
 			log.Info("Context done, exiting")
 			return nil
 		case event := <-syscallEventChan:
-			if _, ok := bannedCgroupIds[event.CgroupId]; ok {
+			if _, ok := bannedCgroupIds.Get(event.CgroupId); ok {
 				continue
 			}
 
@@ -116,7 +114,7 @@ func run() error {
 
 				contentStr := string(content)
 				if !strings.Contains(contentStr, "k8s.io") {
-					bannedCgroupIds[event.CgroupId] = struct{}{}
+					bannedCgroupIds.Put(event.CgroupId, struct{}{})
 					continue
 				}
 				sha = contentStr[strings.LastIndex(contentStr, "/")+1:]
