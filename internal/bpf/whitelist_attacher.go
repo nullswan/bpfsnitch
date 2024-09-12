@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/cilium/ebpf"
-	bpfarch "github.com/nullswan/bpfsentinel/internal/bpf/arch"
+	bpfarch "github.com/nullswan/bpfsnitch/internal/bpf/arch"
 )
 
 const (
