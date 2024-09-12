@@ -23,7 +23,7 @@ func StartServer(log *slog.Logger, cancel context.CancelFunc, port uint32) {
 	http.Handle("/metrics", promhttp.Handler())
 
 	log.With("port", port).Info("Starting metrics server")
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil) // nolint:gosec
 	if err != nil {
 		log.With("error", err).Error("Failed to start metrics server")
 		cancel()
