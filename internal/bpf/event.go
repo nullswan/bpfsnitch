@@ -10,5 +10,5 @@ type SyscallEvent struct {
 }
 
 func (s *SyscallEvent) GetSyscallName() string {
-	return bpfarch.WhitelistedSyscallsMap[int(s.SyscallNr)]
+	return bpfarch.IdToSyscall[int(s.SyscallNr)]
 }
