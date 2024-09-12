@@ -12,9 +12,8 @@ import (
 const (
 	// Map name for the whitelist of syscalls.
 	syscallsWhitelistMapName = "syscall_whitelist"
+	intSz                    = 4
 )
-
-var ()
 
 func registerWhitelistedSyscalls(
 	log *slog.Logger,
@@ -30,10 +29,10 @@ func registerWhitelistedSyscalls(
 
 	for _, nbr := range bpfarch.WhitelistedSyscalls {
 		syscallName := bpfarch.IdToSyscall[nbr]
-		buf := make([]byte, 4)
+		buf := make([]byte, intSz)
 		binary.LittleEndian.PutUint32(buf, uint32(nbr))
 
-		placeholder := make([]byte, 4)
+		placeholder := make([]byte, intSz)
 		if err := syscallMap.Update(
 			buf,
 			placeholder,
