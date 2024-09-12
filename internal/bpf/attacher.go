@@ -13,7 +13,7 @@ import (
 // Define a Kernel BPF context.
 type KBContext struct {
 	EventsReader *perf.Reader
-	Kprobes      []link.Link
+	Tps          []link.Link
 }
 
 func Attach(
@@ -54,13 +54,13 @@ func Attach(
 		return nil, fmt.Errorf("failed to create perf reader: %w", err)
 	}
 
-	kProbes, err := attachKProbes(log, coll)
+	tps, err := attachTracepoints(log, coll)
 	if err != nil {
-		return nil, fmt.Errorf("failed to attach kprobes: %w", err)
+		return nil, fmt.Errorf("failed to attach tps: %w", err)
 	}
 
 	return &KBContext{
 		EventsReader: syscallEventsReader,
-		Kprobes:      kProbes,
+		Tps:          tps,
 	}, nil
 }
