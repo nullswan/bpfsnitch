@@ -21,11 +21,12 @@ func attachTracepoints(
 	coll *ebpf.Collection,
 ) ([]link.Link, error) {
 	kps := make([]link.Link, 0, len(bpfarch.WhitelistedSyscalls))
-	for syscall := range bpfarch.WhitelistedSyscalls {
+	for _, nbr := range bpfarch.WhitelistedSyscalls {
+		syscallName := bpfarch.IdToSyscall[nbr]
 		kp := TpMeta{
 			family:  "syscalls",
 			section: "tracepoint_sys_enter",
-			name:    fmt.Sprintf("sys_enter_%s", syscall),
+			name:    fmt.Sprintf("sys_enter_%s", syscallName),
 		}
 
 		logCtx := log.With(
