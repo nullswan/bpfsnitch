@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -25,8 +27,10 @@ import (
 )
 
 const (
-	bpfProgramElf  = bpfarch.BpfProgramElf
-	prometheusPort = 9090
+	bpfProgramElf   = bpfarch.BpfProgramElf
+	prometheusPort  = 9090
+	cacheBannedSz   = 1000
+	cachePidToShaSz = 1000
 )
 
 func main() {
@@ -47,7 +51,7 @@ func run() error {
 	log := logger.Init()
 
 	if kubernetesMode && !workload.IsSocketPresent() {
-		return fmt.Errorf("runtime socket not found")
+		return errors.New("runtime socket not found")
 	} else if kubernetesMode {
 		log.Info("Kubernetes mode enabled")
 	}
@@ -102,8 +106,8 @@ func run() error {
 		}
 	}
 
-	bannedCgroupIds := lru.New[uint64, struct{}](1000)
-	pidToShaLRU := lru.New[uint64, string](1000)
+	bannedCgroupIDs := lru.New[uint64, struct{}](cacheBannedSz)
+	pidToShaLRU := lru.New[uint64, string](cachePidToShaSz)
 	for {
 		select {
 		case <-ctx.Done():
@@ -111,7 +115,7 @@ func run() error {
 			return nil
 		case event := <-syscallEventChan:
 			if kubernetesMode {
-				if _, ok := bannedCgroupIds.Get(event.CgroupId); ok {
+				if _, ok := bannedCgroupIDs.Get(event.CgroupID); ok {
 					continue
 				}
 
@@ -136,7 +140,7 @@ func run() error {
 
 					contentStr := string(content)
 					if !strings.Contains(contentStr, "k8s.io") {
-						bannedCgroupIds.Put(event.CgroupId, struct{}{})
+						bannedCgroupIDs.Put(event.CgroupID, struct{}{})
 						continue
 					}
 					sha = contentStr[strings.LastIndex(contentStr, "/")+1:]
@@ -158,7 +162,7 @@ func run() error {
 
 				log.With("syscall", event.GetSyscallName()).
 					With("pid", event.Pid).
-					With("cgroup_id", event.CgroupId).
+					With("cgroup_id", event.CgroupID).
 					With("container", container).
 					Debug("Received event")
 
@@ -168,17 +172,16 @@ func run() error {
 						container,
 					).
 					Inc()
-
 			} else {
 				log.With("syscall", event.GetSyscallName()).
 					With("pid", event.Pid).
-					With("cgroup_id", event.CgroupId).
+					With("cgroup_id", event.CgroupID).
 					Debug("Received event")
 
 				metrics.SyscallCounter.
 					WithLabelValues(
 						event.GetSyscallName(),
-						fmt.Sprintf("%d", event.Pid),
+						strconv.FormatUint(event.Pid, 10),
 					).
 					Inc()
 			}

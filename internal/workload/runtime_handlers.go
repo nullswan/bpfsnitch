@@ -2,6 +2,7 @@ package workload
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -20,7 +21,7 @@ func getRuntimeServiceClient() (runtimeapi.RuntimeServiceClient, *grpc.ClientCon
 	}
 
 	if runtimeEndpoint == "" {
-		return nil, nil, fmt.Errorf("no runtime socket found")
+		return nil, nil, errors.New("no runtime socket found")
 	}
 
 	serverAddr := "unix://" + runtimeEndpoint
@@ -41,8 +42,8 @@ func getRuntimeServiceClient() (runtimeapi.RuntimeServiceClient, *grpc.ClientCon
 }
 
 func getContainers(
-	runtimeClient runtimeapi.RuntimeServiceClient,
 	ctx context.Context,
+	runtimeClient runtimeapi.RuntimeServiceClient,
 ) ([]*runtimeapi.Container, error) {
 	req := &runtimeapi.ListContainersRequest{
 		Filter: &runtimeapi.ContainerFilter{
@@ -59,8 +60,8 @@ func getContainers(
 }
 
 func getPods(
-	runtimeClient runtimeapi.RuntimeServiceClient,
 	ctx context.Context,
+	runtimeClient runtimeapi.RuntimeServiceClient,
 ) ([]*runtimeapi.PodSandbox, error) {
 	req := &runtimeapi.ListPodSandboxRequest{
 		Filter: &runtimeapi.PodSandboxFilter{

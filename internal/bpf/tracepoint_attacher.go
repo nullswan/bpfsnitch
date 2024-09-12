@@ -1,6 +1,7 @@
 package bpf
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -26,7 +27,7 @@ func attachTracepoints(
 		kp := TpMeta{
 			family:  "syscalls",
 			section: "tracepoint_sys_enter",
-			name:    fmt.Sprintf("sys_enter_%s", syscallName),
+			name:    "sys_enter_" + syscallName,
 		}
 
 		logCtx := log.With(
@@ -56,7 +57,7 @@ func attachTracepoints(
 	}
 
 	if len(kps) == 0 {
-		return nil, fmt.Errorf("failed to attach any tracepoints")
+		return nil, errors.New("failed to attach any tracepoints")
 	}
 
 	log.Info("Attached tracepoints", "count", len(kps))

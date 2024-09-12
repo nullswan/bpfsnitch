@@ -44,7 +44,7 @@ func (r *ShaResolver) Resolve(sha string) (string, error) {
 func (r *ShaResolver) UpdateCache() error {
 	ctx := context.Background()
 
-	pods, err := getPods(r.client, ctx)
+	pods, err := getPods(ctx, r.client)
 	if err != nil {
 		return fmt.Errorf("failed to list pods: %w", err)
 	}
@@ -54,21 +54,21 @@ func (r *ShaResolver) UpdateCache() error {
 		podMap[pod.Id] = pod
 	}
 
-	containers, err := getContainers(r.client, ctx)
+	containers, err := getContainers(ctx, r.client)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
 
 	for _, container := range containers {
-		containerPodId := container.GetPodSandboxId()
-		containerPod, ok := podMap[containerPodId]
+		containerPodID := container.GetPodSandboxId()
+		containerPod, ok := podMap[containerPodID]
 		if !ok {
 			r.logger.Warn(
 				"container %s has no associated pod",
 				"container_id",
 				container.GetId(),
 				"pod_id",
-				containerPodId,
+				containerPodID,
 			)
 			continue
 		}
