@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -15,7 +16,7 @@ var SyscallCounter = prometheus.NewCounterVec(
 		Name: "syscall_counter",
 		Help: "Number of syscalls",
 	},
-	[]string{"syscall", "userId", "cgroupId"},
+	[]string{"syscall", "container"},
 )
 
 func StartServer(log *slog.Logger, cancel context.CancelFunc, port uint32) {
@@ -30,5 +31,12 @@ func StartServer(log *slog.Logger, cancel context.CancelFunc, port uint32) {
 }
 
 func RegisterMetrics() {
+	// Remove all builtin metrics that are produced by prometheus client.
+	// TODO: Remove promhttp_metric_handler_requests_total && promhttp_metric_handler_requests_in_flight
+	prometheus.Unregister(collectors.NewGoCollector())
+	prometheus.Unregister(collectors.NewProcessCollector(
+		collectors.ProcessCollectorOpts{},
+	))
+
 	prometheus.MustRegister(SyscallCounter)
 }
