@@ -5,7 +5,7 @@ import bpfarch "github.com/nullswan/bpfsnitch/internal/bpf/arch"
 type SyscallEvent struct {
 	SyscallNr int64
 	Ts        uint64
-	CgroupId  uint64
+	CgroupID  uint64
 	Pid       uint64
 }
 
