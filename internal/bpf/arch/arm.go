@@ -5,7 +5,7 @@ package bpfarch
 
 const BpfProgramElf = bpfProgramName + "_arm.o"
 
-var WhitelistedSyscalls = map[string]int{
+var SyscallToId = map[string]int{
 	"restart_syscall":        0,
 	"exit":                   1,
 	"fork":                   2,
@@ -364,7 +364,7 @@ var WhitelistedSyscalls = map[string]int{
 	"ARM_set_tls":            983045,
 }
 
-var WhitelistedSyscallsMap = map[int]string{
+var IdToSyscall = map[int]string{
 	0:      "restart_syscall",
 	1:      "exit",
 	2:      "fork",
@@ -721,4 +721,65 @@ var WhitelistedSyscallsMap = map[int]string{
 	983043: "ARM_usr26",
 	983044: "ARM_usr32",
 	983045: "ARM_set_tls",
+}
+
+var WhitelistedSyscalls = []int{
+	SyscallToId["restart_syscall"],
+	SyscallToId["exit"],
+	SyscallToId["fork"],
+	SyscallToId["creat"],
+	SyscallToId["link"],
+	SyscallToId["unlink"],
+	SyscallToId["execve"],
+	SyscallToId["mknod"],
+	SyscallToId["ptrace"],
+	SyscallToId["setuid"],
+	SyscallToId["getuid"],
+	SyscallToId["setgid"],
+	SyscallToId["getgid"],
+	SyscallToId["seteuid"],
+	SyscallToId["getegid"],
+	SyscallToId["setpgid"],
+	SyscallToId["setreuid"],
+	SyscallToId["setregid"],
+	SyscallToId["setresuid"],
+	SyscallToId["getresuid"],
+	SyscallToId["setresgid"],
+	SyscallToId["getresgid"],
+	SyscallToId["prctl"],
+	SyscallToId["capget"],
+	SyscallToId["capset"],
+	SyscallToId["seccomp"],
+	SyscallToId["setns"],
+	SyscallToId["unshare"],
+	SyscallToId["chroot"],
+	SyscallToId["mount"],
+	SyscallToId["umount2"],
+	SyscallToId["pivot_root"],
+	SyscallToId["clone"],
+	SyscallToId["wait4"],
+	SyscallToId["kill"],
+	SyscallToId["nice"],
+	SyscallToId["kill"],
+	SyscallToId["tkill"],
+	SyscallToId["tgkill"],
+	SyscallToId["socket"],
+	SyscallToId["bind"],
+	SyscallToId["connect"],
+	SyscallToId["listen"],
+	SyscallToId["accept"],
+	SyscallToId["accept4"],
+	SyscallToId["getsockname"],
+	SyscallToId["getpeername"],
+	SyscallToId["socketpair"],
+	SyscallToId["sendto"],
+	SyscallToId["recvfrom"],
+	SyscallToId["sendmsg"],
+	SyscallToId["recvmsg"],
+	SyscallToId["getsockopt"],
+	SyscallToId["setsockopt"],
+	SyscallToId["shutdown"],
+	SyscallToId["sendmmsg"],
+	SyscallToId["sethostname"],
+	SyscallToId["setdomainname"],
 }
