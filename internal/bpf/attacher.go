@@ -10,6 +10,10 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 )
 
+const (
+	perfReaderBufSz = 1024
+)
+
 // Define a Kernel BPF context.
 type KBContext struct {
 	EventsReader *perf.Reader
@@ -48,7 +52,7 @@ func Attach(
 
 	syscallEventsReader, err := perf.NewReader(
 		coll.Maps["syscall_events"],
-		1024,
+		perfReaderBufSz,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create perf reader: %w", err)
