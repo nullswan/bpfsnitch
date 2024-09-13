@@ -2,7 +2,7 @@ package bpf
 
 import bpfarch "github.com/nullswan/bpfsnitch/internal/bpf/arch"
 
-type BpfEvent interface {
+type Event interface {
 	SyscallEvent | NetworkEvent
 }
 

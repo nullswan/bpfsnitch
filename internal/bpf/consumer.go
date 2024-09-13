@@ -9,7 +9,7 @@ import (
 	"github.com/cilium/ebpf/perf"
 )
 
-func ConsumeEvents[T BpfEvent](
+func ConsumeEvents[T Event](
 	ctx context.Context,
 	log *slog.Logger,
 	evReader *perf.Reader,
