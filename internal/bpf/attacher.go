@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	perfReaderBufSz = 1024
+	perfReaderBufSz = 8192
 )
 
 // Define a Kernel BPF context.
