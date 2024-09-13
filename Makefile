@@ -14,12 +14,13 @@ build-docker:
 	docker build \
 		-t bpfsnitch:latest \
 		. -f deployments/Dockerfile
-	
+
 .PHONY: build-docker-multiarch
 build-docker-multiarch:
 	docker buildx build \
 		--platform linux/amd64,linux/arm64,linux/arm/v7 \
-		-t bpfsnitch:latest \
+		-t nullswan/bpfsnitch:latest \
+		--push \
 		. -f deployments/Dockerfile
 
 .PHONY: build
