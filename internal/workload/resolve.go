@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	ErrCgroupIDBanned = errors.New("cgroup id is banned")
+	ErrCgroupIDBanned       = errors.New("cgroup id is banned")
+	ErrCgroupIDNotContainer = errors.New("cgroup id is not container")
 )
 
 func ResolveContainer(
@@ -52,9 +53,7 @@ func ResolveContainer(
 	return container, nil
 }
 
-var (
-	reKubeContainerd = regexp.MustCompile(`([a-f0-9]{64})\.scope`)
-)
+var reKubeContainerd = regexp.MustCompile(`([a-f0-9]{64})\.scope`)
 
 func readShaFromCgroup(
 	pid uint64,
@@ -87,12 +86,12 @@ func readShaFromCgroup(
 	// 0::/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod7bd1a2a3_0861_4fe1_be78_9c76385b3dc0.slice/cri-containerd-1579a01cfce4b1e74529c17bed485d86b871b58f13348c773076b101df4ff62d.scope
 	if strings.Contains(contentStr, "cri-containerd") {
 		match := reKubeContainerd.FindStringSubmatch(contentStr)
-		if len(match) == 2 {
+		if len(match) == 2 { // nolint: mnd
 			return match[1], nil
 		}
 	}
 
 	log.With("cgroup_id", cgroupID).Debug("Banning cgroup id")
 	bannedCgroupIDs.Put(cgroupID, struct{}{})
-	return "", fmt.Errorf("cgroup id is not kubelet, banning")
+	return "", ErrCgroupIDNotContainer
 }
