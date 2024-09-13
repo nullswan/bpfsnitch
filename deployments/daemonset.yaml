@@ -105,6 +105,11 @@ spec:
               mountPropagation: HostToContainer
             - name: host-proc
               mountPath: /host_proc
+              mountPropagation: HostToContainer
+              readOnly: true
+            - name: containerd-sock
+              mountPath: /run/containerd/containerd.sock
+              mountPropagation: HostToContainer
               readOnly: true
           # resources:
           #   limits:
@@ -130,3 +135,7 @@ spec:
           hostPath:
             path: /proc
             type: Directory
+        - name: containerd-sock
+          hostPath:
+            path: /run/containerd/containerd.sock
+            type: Socket

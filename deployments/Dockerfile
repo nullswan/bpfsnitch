@@ -32,6 +32,7 @@ WORKDIR /root/
 
 # Copy the built executable from the builder stage
 COPY --from=builder /build/dist .
+COPY --from=builder /build/bpfsnitch_lib_*.o .
 
 # Ensure the main executable has the right permissions
 RUN chmod +x ./bpfsnitch
