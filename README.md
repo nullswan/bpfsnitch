@@ -161,9 +161,9 @@ bpfsnitch is released under the GNU General Public License (GPL).
 
 ## Contact
 
-- Contributor: @nullswan <pro@nullswan.io>
-- Reviewers: @gmarcha, @naofel1 
-- GitHub Issues: https://github.com/nullswan/bpfsnitch/issues
+- Contributor: [@nullswan](https://github.com/nullswan) <pro@nullswan.io>
+- Reviewers: [@gmarcha](https://github.com/gmarcha), [@naofel1](https://github.com/naofel1)
+- GitHub Issues: [https://github.com/nullswan/bpfsnitch/issues](https://github.com/nullswan/bpfsnitch/issues)
 
 ## Acknowledgments
 
