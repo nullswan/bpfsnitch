@@ -59,7 +59,7 @@ Deploy bpfsnitch as a DaemonSet to monitor all nodes in your cluster.
 1. Apply the DaemonSet Manifest
 
 ```bash
-kubectl apply -f kubernetes/bpfsnitch-daemonset.yaml
+curl -s https://raw.githubusercontent.com/nullswan/bpfsnitch/main/deployments/daemonset.yaml | kubectl apply -f -
 ```
 
 ## Metrics
