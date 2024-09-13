@@ -47,7 +47,7 @@ spec:
                   - key: kubernetes.io/arch
                     operator: In
                     values:
-                      - arm/v7
+                      - arm
       initContainers:
         - name: mount-bpf-fs
           image: alpine:3.20
@@ -57,8 +57,7 @@ spec:
             - "--"
           args:
             - >-
-              mount | grep "/sys/fs/bpf type bpf" || mount -t bpf bpf
-              /sys/fs/bpf
+              mount | grep "/sys/fs/bpf type bpf" || mount -t bpf bpf /sys/fs/bpf
           volumeMounts:
             - name: bpf-maps
               mountPath: /sys/fs/bpf
@@ -70,16 +69,15 @@ spec:
             privileged: true
       containers:
         - name: bpfsnitch-agent
-          image: bpfsnitch:latest
-          imagePullPolicy: Never
+          image: nullswan/bpfsnitch:latest
+          imagePullPolicy: IfNotPresent
           args:
-            - "/bin/sh"
-            - "-c"
-            - "./ebpf -kubernetes"
+            - "./bpfsnitch"
+            - "-kubernetes"
           securityContext:
             privileged: true
             capabilities:
-              # TODO(v1): sort out the capabilities
+              # TODO: sort out the capabilities
               add:
                 - CHOWN
                 - KILL
@@ -105,6 +103,9 @@ spec:
             - name: kernel-debug
               mountPath: /sys/kernel/debug
               mountPropagation: HostToContainer
+            - name: host-proc
+              mountPath: /host_proc
+              readOnly: true
           # resources:
           #   limits:
           #     memory: "250Mi"
@@ -117,3 +118,15 @@ spec:
           hostPath:
             path: /sys/fs/bpf
             type: DirectoryOrCreate
+        - name: kernel-trace
+          hostPath:
+            path: /sys/kernel/tracing
+            type: Directory
+        - name: kernel-debug
+          hostPath:
+            path: /sys/kernel/debug
+            type: Directory
+        - name: host-proc
+          hostPath:
+            path: /proc
+            type: Directory
