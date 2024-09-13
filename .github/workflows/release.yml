@@ -1,5 +1,5 @@
 # https://goreleaser.com/ci/actions/
-name: goreleaser
+name: release
 
 on:
   push:
