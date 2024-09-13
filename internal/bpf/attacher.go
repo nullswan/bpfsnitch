@@ -16,8 +16,11 @@ const (
 
 // Define a Kernel BPF context.
 type KBContext struct {
-	EventsReader *perf.Reader
-	Tps          []link.Link
+	SyscallEventReader *perf.Reader
+	NetworkEventReader *perf.Reader
+
+	Tps []link.Link
+	Kps []link.Link
 }
 
 func Attach(
@@ -58,13 +61,61 @@ func Attach(
 		return nil, fmt.Errorf("failed to create perf reader: %w", err)
 	}
 
+	networkEventsReader, err := perf.NewReader(
+		coll.Maps["network_events"],
+		perfReaderBufSz,
+	)
+	if err != nil {
+		err := syscallEventsReader.Close()
+		if err != nil {
+			log.With("error", err).
+				Error("Failed to close perf reader")
+		}
+		return nil, fmt.Errorf("failed to create perf reader: %w", err)
+	}
+
 	tps, err := attachTracepoints(log, coll)
 	if err != nil {
+		err2 := syscallEventsReader.Close()
+		if err2 != nil {
+			log.With("error", err2).
+				Error("Failed to close perf reader")
+		}
+
+		err2 = networkEventsReader.Close()
+		if err2 != nil {
+			log.With("error", err2).
+				Error("Failed to close perf reader")
+		}
+
 		return nil, fmt.Errorf("failed to attach tps: %w", err)
 	}
 
+	kps, err := attachKProbes(log, coll)
+	if err != nil {
+		err2 := syscallEventsReader.Close()
+		if err2 != nil {
+			log.With("error", err2).
+				Error("Failed to close perf reader")
+		}
+
+		err2 = networkEventsReader.Close()
+		if err2 != nil {
+			log.With("error", err2).
+				Error("Failed to close perf reader")
+		}
+
+		for _, tp := range tps {
+			tp.Close()
+		}
+
+		return nil, fmt.Errorf("failed to attach kps: %w", err)
+	}
+
 	return &KBContext{
-		EventsReader: syscallEventsReader,
-		Tps:          tps,
+		SyscallEventReader: syscallEventsReader,
+		NetworkEventReader: networkEventsReader,
+		Tps:                tps,
+		Kps:                kps,
 	}, nil
 }
