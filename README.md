@@ -1,6 +1,6 @@
 # bpfsnitch
 
-[![License: GPL](https://img.shields.io/badge/License-GPL-blue.svg)](LICENSE)
+[![License: GPL](https://img.shields.io/badge/License-GPL-blue.svg)](LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/nullswan/bpfsnitch)](https://goreportcard.com/report/github.com/nullswan/bpfsnitch)
 
 bpfsnitch is an open-source, real-time monitoring tool for Linux systems and Kubernetes clusters. Inspired by GlassWire, bpfsnitch leverages eBPF (extended Berkeley Packet Filter) technology to provide observability at the lowest level possible by tracking system calls and network activities. It is capable of monitoring every syscall and network event in real-time, offering valuable insights into what's happening inside your systems and containers.
 
