@@ -30,7 +30,7 @@ func registerWhitelistedSyscalls(
 	for _, nbr := range bpfarch.WhitelistedSyscalls {
 		syscallName := bpfarch.IdToSyscall[nbr]
 		buf := make([]byte, intSz)
-		binary.LittleEndian.PutUint32(buf, uint32(nbr))
+		binary.LittleEndian.PutUint32(buf, uint32(nbr)) //nolint: gosec
 
 		placeholder := make([]byte, intSz)
 		if err := syscallMap.Update(
