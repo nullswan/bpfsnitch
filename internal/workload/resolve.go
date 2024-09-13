@@ -1,13 +1,19 @@
 package workload
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/nullswan/bpfsnitch/pkg/lru"
+)
+
+var (
+	ErrCgroupIDBanned = errors.New("cgroup id is banned")
 )
 
 func ResolveContainer(
@@ -18,34 +24,37 @@ func ResolveContainer(
 	shaResolver *ShaResolver,
 	procPath string,
 	log *slog.Logger,
-) (string, bool) {
+) (string, error) {
 	if _, ok := bannedCgroupIDs.Get(cgroupID); ok {
-		return "", false
+		return "", ErrCgroupIDBanned
 	}
 
 	sha, ok := pidToShaLRU.Get(pid)
 	if !ok {
-		sha, ok = readShaFromCgroup(
+		sha, err := readShaFromCgroup(
 			pid,
 			cgroupID,
 			bannedCgroupIDs,
 			procPath,
 			log,
 		)
-		if !ok {
-			return "", false
+		if err != nil {
+			return "", fmt.Errorf("failed to read sha from cgroup: %w", err)
 		}
 		pidToShaLRU.Put(pid, sha)
 	}
 
 	container, err := shaResolver.Resolve(sha)
 	if err != nil {
-		log.With("error", err).With("sha", sha).Error("Failed to resolve sha")
-		return "", false
+		return "", fmt.Errorf("failed to resolve sha: %w", err)
 	}
 
-	return container, true
+	return container, nil
 }
+
+var (
+	reKubeContainerd = regexp.MustCompile(`([a-f0-9]{64})\.scope`)
+)
 
 func readShaFromCgroup(
 	pid uint64,
@@ -53,26 +62,37 @@ func readShaFromCgroup(
 	bannedCgroupIDs *lru.Cache[uint64, struct{}],
 	procPath string,
 	log *slog.Logger,
-) (string, bool) {
+) (string, error) {
 	fd, err := os.Open(fmt.Sprintf("/%s/%d/cgroup", procPath, pid))
 	if err != nil {
-		log.With("error", err).Error("Failed to open cgroup file")
-		return "", false
+		return "", fmt.Errorf("failed to open cgroup file: %w", err)
 	}
 	defer fd.Close()
 
 	content, err := io.ReadAll(fd)
 	if err != nil {
-		log.With("error", err).Error("Failed to read cgroup file")
-		return "", false
+		return "", fmt.Errorf("failed to read cgroup file: %w", err)
 	}
 
+	// format local containerd
 	contentStr := string(content)
-	if !strings.Contains(contentStr, "k8s.io") {
-		bannedCgroupIDs.Put(cgroupID, struct{}{})
-		return "", false
+	if strings.Contains(contentStr, "k8s.io") {
+		sha := strings.TrimSpace(
+			contentStr[strings.LastIndex(contentStr, "/")+1:],
+		)
+		return sha, nil
 	}
 
-	sha := strings.TrimSpace(contentStr[strings.LastIndex(contentStr, "/")+1:])
-	return sha, true
+	// format SCW, AWS
+	// 0::/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod7bd1a2a3_0861_4fe1_be78_9c76385b3dc0.slice/cri-containerd-1579a01cfce4b1e74529c17bed485d86b871b58f13348c773076b101df4ff62d.scope
+	if strings.Contains(contentStr, "cri-containerd") {
+		match := reKubeContainerd.FindStringSubmatch(contentStr)
+		if len(match) == 2 {
+			return match[1], nil
+		}
+	}
+
+	log.With("cgroup_id", cgroupID).Debug("Banning cgroup id")
+	bannedCgroupIDs.Put(cgroupID, struct{}{})
+	return "", fmt.Errorf("cgroup id is not kubelet, banning")
 }
