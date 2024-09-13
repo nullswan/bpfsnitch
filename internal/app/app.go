@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	bpfProgramElf   = bpfarch.BpfProgramElf
-	cacheBannedSz   = 1000
-	cachePidToShaSz = 1000
+	bpfProgramElf         = bpfarch.BpfProgramElf
+	cacheBannedSz         = 1000
+	cachePidToShaSz       = 1000
+	defaultPrometheusPort = 9090
 )
 
 func Run() error {
@@ -31,7 +32,12 @@ func Run() error {
 	flag.BoolVar(&enablePprof, "pprof", false, "Enable pprof")
 
 	var prometheusPort uint64
-	flag.Uint64Var(&prometheusPort, "prometheus-port", 9090, "Prometheus port")
+	flag.Uint64Var(
+		&prometheusPort,
+		"prometheus-port",
+		defaultPrometheusPort,
+		"Prometheus port",
+	)
 
 	flag.Parse()
 
