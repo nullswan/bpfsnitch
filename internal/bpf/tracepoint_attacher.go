@@ -21,10 +21,10 @@ func attachTracepoints(
 	log *slog.Logger,
 	coll *ebpf.Collection,
 ) ([]link.Link, error) {
-	kps := make([]link.Link, 0, len(bpfarch.WhitelistedSyscalls))
+	tps := make([]link.Link, 0, len(bpfarch.WhitelistedSyscalls))
 	for _, nbr := range bpfarch.WhitelistedSyscalls {
 		syscallName := bpfarch.IdToSyscall[nbr]
-		kp := TpMeta{
+		tp := TpMeta{
 			family:  "syscalls",
 			section: "tracepoint_sys_enter",
 			name:    "sys_enter_" + syscallName,
@@ -32,14 +32,14 @@ func attachTracepoints(
 
 		logCtx := log.With(
 			"family",
-			kp.family,
+			tp.family,
 			"section",
-			kp.section,
+			tp.section,
 			"name",
-			kp.name,
+			tp.name,
 		)
 
-		kpLink, err := attachKProbe(coll, kp)
+		tpLink, err := attachTracepoint(coll, tp)
 		if err != nil {
 			logCtx.Error(
 				"Failed to attach tracepoint",
@@ -53,19 +53,19 @@ func attachTracepoints(
 			"Attached tracepoint",
 		)
 
-		kps = append(kps, kpLink)
+		tps = append(tps, tpLink)
 	}
 
-	if len(kps) == 0 {
+	if len(tps) == 0 {
 		return nil, errors.New("failed to attach any tracepoints")
 	}
 
-	log.Info("Attached tracepoints", "count", len(kps))
+	log.Info("Attached tracepoints", "count", len(tps))
 
-	return kps, nil
+	return tps, nil
 }
 
-func attachKProbe(
+func attachTracepoint(
 	coll *ebpf.Collection,
 	tp TpMeta,
 ) (link.Link, error) {
