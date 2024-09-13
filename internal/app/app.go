@@ -76,6 +76,10 @@ func Run() error {
 
 	bannedCgroupIDs := lru.New[uint64, struct{}](cacheBannedSz)
 	pidToShaLRU := lru.New[uint64, string](cachePidToShaSz)
+	procPath := "/proc"
+	if kubernetesMode {
+		procPath = "/host_proc"
+	}
 
 	for {
 		select {
@@ -92,6 +96,7 @@ func Run() error {
 				pidToShaLRU,
 				bannedCgroupIDs,
 				shaResolver,
+				procPath,
 				log,
 			)
 			if !ok {
@@ -107,6 +112,7 @@ func Run() error {
 					pidToShaLRU,
 					bannedCgroupIDs,
 					shaResolver,
+					procPath,
 					log,
 				)
 				if !ok {

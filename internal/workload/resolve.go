@@ -16,6 +16,7 @@ func ResolveContainer(
 	pidToShaLRU *lru.Cache[uint64, string],
 	bannedCgroupIDs *lru.Cache[uint64, struct{}],
 	shaResolver *ShaResolver,
+	procPath string,
 	log *slog.Logger,
 ) (string, bool) {
 	if _, ok := bannedCgroupIDs.Get(cgroupID); ok {
@@ -24,7 +25,13 @@ func ResolveContainer(
 
 	sha, ok := pidToShaLRU.Get(pid)
 	if !ok {
-		sha, ok = readShaFromCgroup(pid, cgroupID, bannedCgroupIDs, log)
+		sha, ok = readShaFromCgroup(
+			pid,
+			cgroupID,
+			bannedCgroupIDs,
+			procPath,
+			log,
+		)
 		if !ok {
 			return "", false
 		}
@@ -44,9 +51,10 @@ func readShaFromCgroup(
 	pid uint64,
 	cgroupID uint64,
 	bannedCgroupIDs *lru.Cache[uint64, struct{}],
+	procPath string,
 	log *slog.Logger,
 ) (string, bool) {
-	fd, err := os.Open(fmt.Sprintf("/proc/%d/cgroup", pid))
+	fd, err := os.Open(fmt.Sprintf("/%s/%d/cgroup", procPath, pid))
 	if err != nil {
 		log.With("error", err).Error("Failed to open cgroup file")
 		return "", false
