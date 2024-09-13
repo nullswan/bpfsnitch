@@ -40,20 +40,19 @@ int trace_udp_recvmsg(struct udp_recvmsg_args *ctx) {
     return 0;
   }
   
-  struct network_event network_event = {
-    .ts = ts,
-    .pid = pid,
-    .cgroup_id = cgroup_id,
-    .saddr = saddr,
-    .daddr = daddr,
-    .sport = sport,
-    .dport = dport,
-    .size = ctx->size,
-    .direction = 0,
-    .protocol = 17
-  };
+  struct network_event e = {};
+  e.ts = ts;
+  e.pid = pid;
+  e.cgroup_id = cgroup_id;
+  e.saddr = saddr;
+  e.daddr = daddr;
+  e.sport = sport;
+  e.dport = dport;
+  e.size = size;
+  e.direction = 0;
+  e.protocol = 17;
 
-  bpf_perf_event_output(ctx, &network_events, BPF_F_CURRENT_CPU, &network_event, sizeof(network_event));
+  bpf_perf_event_output(ctx, &network_events, BPF_F_CURRENT_CPU, &e, sizeof(e));
   return 0;
 }
 
@@ -68,12 +67,15 @@ int trace_udp_sendmsg(struct udp_sendmsg_args *ctx) {
   u64 ts = bpf_ktime_get_ns();
   u64 cgroup_id = bpf_get_current_cgroup_id();
   u32 pid = bpf_get_current_pid_tgid() >> 32;
+
   struct sock *sk = ctx->sk;
   size_t size = ctx->len;
 
   __u64 err;
-  __be32 saddr, daddr;
-  __be16 sport, dport;
+  __be32 saddr;
+  __be32 daddr;
+  __be16 sport;
+  __be16 dport;
 
   err = bpf_probe_read(&saddr, sizeof(saddr), &sk->__sk_common.skc_rcv_saddr);
   if (err != 0)
@@ -92,19 +94,18 @@ int trace_udp_sendmsg(struct udp_sendmsg_args *ctx) {
     return 0;
   }
 
-  struct network_event network_event = {
-    .ts = ts,
-    .pid = pid,
-    .cgroup_id = cgroup_id,
-    .saddr = saddr,
-    .daddr = daddr,
-    .sport = sport,
-    .dport = dport,
-    .size = size,
-    .direction = 1,
-    .protocol = 17
-  };
+  struct network_event e = {};
 
-  bpf_perf_event_output(ctx, &network_events, BPF_F_CURRENT_CPU, &network_event, sizeof(network_event));
+  e.ts = ts;
+  e.direction = 1;
+  e.protocol = 17;
+  e.pid = pid;
+  e.cgroup_id = cgroup_id;
+  e.saddr = saddr;
+  e.daddr = daddr;
+  e.sport = sport;
+  e.dport = dport;
+
+  bpf_perf_event_output(ctx, &network_events, BPF_F_CURRENT_CPU, &e, sizeof(e));
   return 0;
 }
