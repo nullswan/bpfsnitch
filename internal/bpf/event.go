@@ -2,6 +2,10 @@ package bpf
 
 import bpfarch "github.com/nullswan/bpfsnitch/internal/bpf/arch"
 
+type BpfEvent interface {
+	SyscallEvent | NetworkEvent
+}
+
 type SyscallEvent struct {
 	SyscallNr int64
 	Ts        uint64
@@ -9,6 +13,22 @@ type SyscallEvent struct {
 	Pid       uint64
 }
 
-func (s *SyscallEvent) GetSyscallName() string {
+func (s SyscallEvent) GetSyscallName() string {
 	return bpfarch.IdToSyscall[int(s.SyscallNr)]
+}
+
+type NetworkEvent struct {
+	Ts       uint64
+	Pid      uint64
+	CgroupID uint64
+	Size     uint64
+
+	Saddr uint32
+	Daddr uint32
+
+	Sport uint16
+	Dport uint16
+
+	Direction uint8
+	Protocol  uint8
 }
