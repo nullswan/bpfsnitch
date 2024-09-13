@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"log/slog"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -15,9 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"unsafe"
 
-	"github.com/cilium/ebpf/perf"
 	"github.com/nullswan/bpfsnitch/internal/bpf"
 	bpfarch "github.com/nullswan/bpfsnitch/internal/bpf/arch"
 	"github.com/nullswan/bpfsnitch/internal/logger"
@@ -75,11 +73,17 @@ func run() error {
 			Info("Received signal, cancelling context")
 
 		cancel()
-		for _, kp := range bpfCtx.Tps {
+		for _, tp := range bpfCtx.Tps {
+			tp.Close()
+		}
+
+		for _, kp := range bpfCtx.Kps {
 			kp.Close()
 		}
 
-		bpfCtx.EventsReader.Close()
+		bpfCtx.SyscallEventReader.Close()
+		bpfCtx.NetworkEventReader.Close()
+
 		log.Info("Closed event reader")
 	}()
 
@@ -96,7 +100,9 @@ func run() error {
 	go metrics.StartServer(log, cancel, prometheusPort)
 
 	syscallEventChan := make(chan *bpf.SyscallEvent)
-	go consumeEvents(ctx, log, bpfCtx.EventsReader, syscallEventChan)
+	networkEventChan := make(chan *bpf.NetworkEvent)
+	go bpf.ConsumeEvents(ctx, log, bpfCtx.SyscallEventReader, syscallEventChan)
+	go bpf.ConsumeEvents(ctx, log, bpfCtx.NetworkEventReader, networkEventChan)
 
 	var shaResolver *workload.ShaResolver
 	if kubernetesMode {
@@ -113,6 +119,108 @@ func run() error {
 		case <-ctx.Done():
 			log.Info("Context done, exiting")
 			return nil
+		case event := <-networkEventChan:
+			if !kubernetesMode {
+				continue
+			}
+
+			sha, ok := pidToShaLRU.Get(event.Pid)
+			if !ok {
+				fd, err := os.Open(
+					fmt.Sprintf("/proc/%d/cgroup", event.Pid),
+				)
+				if err != nil {
+					log.With("error", err).
+						Error("Failed to open cgroup file")
+					continue
+				}
+				defer fd.Close()
+
+				content, err := io.ReadAll(fd)
+				if err != nil {
+					log.With("error", err).
+						Error("Failed to read cgroup file")
+					continue
+				}
+
+				contentStr := string(content)
+				if !strings.Contains(contentStr, "k8s.io") {
+					bannedCgroupIDs.Put(event.CgroupID, struct{}{})
+					continue
+				}
+				sha = contentStr[strings.LastIndex(contentStr, "/")+1:]
+
+				// Prevent the last character from being a newline.
+				sha = sha[0 : len(sha)-1]
+
+				pidToShaLRU.Put(event.Pid, sha)
+			}
+
+			container, err := shaResolver.Resolve(sha)
+			if err != nil {
+				log.With("error", err).
+					With("sha", sha).
+					Error("Failed to resolve sha")
+
+				continue
+			}
+
+			// Adjust endianness if necessary
+			event.Saddr = ntohl(event.Saddr)
+			event.Daddr = ntohl(event.Daddr)
+			event.Sport = ntohs(event.Sport)
+			event.Dport = ntohs(event.Dport)
+
+			// Convert IP addresses to net.IP
+			saddr := intToIP(event.Saddr)
+			daddr := intToIP(event.Daddr)
+
+			log.With("pid", event.Pid).
+				With("cgroup_id", event.CgroupID).
+				With("container", container).
+				With("saddr", saddr).
+				With("daddr", daddr).
+				With("sport", event.Sport).
+				With("dport", event.Dport).
+				With("size", event.Size).
+				Info("Received event")
+
+			if event.Protocol == 17 && event.Direction == 0 &&
+				event.Dport == 53 {
+				metrics.DNSQueryCounter.
+					WithLabelValues(
+						container,
+					).
+					Inc()
+			}
+
+			if event.Direction == 0 {
+				metrics.NetworkSentBytesCounter.
+					WithLabelValues(
+						container,
+						daddr.String(),
+					).
+					Add(float64(event.Size))
+				metrics.NetworkSentPacketsCounter.
+					WithLabelValues(
+						container,
+						daddr.String(),
+					).
+					Inc()
+			} else {
+				metrics.NetworkReceivedBytesCounter.
+					WithLabelValues(
+						container,
+						daddr.String(),
+					).
+					Add(float64(event.Size))
+				metrics.NetworkReceivedPacketsCounter.
+					WithLabelValues(
+						container,
+						daddr.String(),
+					).
+					Inc()
+			}
 		case event := <-syscallEventChan:
 			if kubernetesMode {
 				if _, ok := bannedCgroupIDs.Get(event.CgroupID); ok {
@@ -189,36 +297,17 @@ func run() error {
 	}
 }
 
-func consumeEvents(
-	ctx context.Context,
-	log *slog.Logger,
-	eventsReader *perf.Reader,
-	syscallEventChan chan *bpf.SyscallEvent,
-) {
-	log.Info("Starting event reader")
+func intToIP(ip uint32) net.IP {
+	return net.IPv4(byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip))
+}
 
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("Context done, stopping event reader")
-			return
-		default:
-			record, err := eventsReader.Read()
-			if err != nil {
-				log.With("error", err).Error("Failed to read event")
-				continue
-			}
+func ntohs(val uint16) uint16 {
+	return (val<<8)&0xff00 | val>>8
+}
 
-			if record.LostSamples > 0 {
-				log.With("lost_samples", record.LostSamples).
-					Warn("Lost samples")
-				continue
-			}
-
-			event := (*bpf.SyscallEvent)(unsafe.Pointer(&record.RawSample[0]))
-			syscallEventChan <- event
-			log.With("syscall", event.GetSyscallName()).
-				Debug("Received event")
-		}
-	}
+func ntohl(val uint32) uint32 {
+	return (val<<24)&0xff000000 |
+		(val<<8)&0x00ff0000 |
+		(val>>8)&0x0000ff00 |
+		(val>>24)&0x000000ff
 }
