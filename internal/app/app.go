@@ -84,10 +84,15 @@ func Run() error {
 
 	bannedCgroupIDs := lru.New[uint64, struct{}](cacheBannedSz)
 	pidToShaLRU := lru.New[uint64, string](cachePidToShaSz)
+
 	procPath := "/proc"
 	if kubernetesMode {
 		procPath = "/host_proc"
 	}
+	log.
+		With("proc_path", procPath).
+		With("kubernetes_mode", kubernetesMode).
+		Info("Starting event processor")
 
 	for {
 		select {
@@ -98,7 +103,7 @@ func Run() error {
 			if !kubernetesMode {
 				continue
 			}
-			container, ok := workload.ResolveContainer(
+			container, err := workload.ResolveContainer(
 				event.Pid,
 				event.CgroupID,
 				pidToShaLRU,
@@ -107,14 +112,17 @@ func Run() error {
 				procPath,
 				log,
 			)
-			if !ok {
+			if err != nil {
+				if !errors.Is(err, workload.ErrCgroupIDBanned) {
+					log.With("error", err).Debug("failed to resolve container")
+				}
 				continue
 			}
 
 			bpf.ProcessNetworkEvent(event, container, log)
 		case event := <-syscallEventChan:
 			if kubernetesMode {
-				container, ok := workload.ResolveContainer(
+				container, err := workload.ResolveContainer(
 					event.Pid,
 					event.CgroupID,
 					pidToShaLRU,
@@ -123,7 +131,11 @@ func Run() error {
 					procPath,
 					log,
 				)
-				if !ok {
+				if err != nil {
+					if !errors.Is(err, workload.ErrCgroupIDBanned) {
+						log.With("error", err).
+							Debug("failed to resolve container")
+					}
 					continue
 				}
 
