@@ -59,7 +59,7 @@ var NetworkSentPacketsCounter = prometheus.NewCounterVec(
 	[]string{"container", "remote_ip"},
 )
 
-func StartServer(log *slog.Logger, cancel context.CancelFunc, port uint32) {
+func StartServer(log *slog.Logger, cancel context.CancelFunc, port uint64) {
 	http.Handle("/metrics", promhttp.Handler())
 
 	log.With("port", port).Info("Starting metrics server")

@@ -19,7 +19,6 @@ import (
 
 const (
 	bpfProgramElf   = bpfarch.BpfProgramElf
-	prometheusPort  = 9090
 	cacheBannedSz   = 1000
 	cachePidToShaSz = 1000
 )
@@ -30,6 +29,9 @@ func Run() error {
 
 	var enablePprof bool
 	flag.BoolVar(&enablePprof, "pprof", false, "Enable pprof")
+
+	var prometheusPort uint64
+	flag.Uint64Var(&prometheusPort, "prometheus-port", 9090, "Prometheus port")
 
 	flag.Parse()
 

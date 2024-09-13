@@ -74,6 +74,9 @@ spec:
           args:
             - "./bpfsnitch"
             - "-kubernetes"
+          ports:
+            - containerPort: 9090
+              protocol: TCP
           securityContext:
             privileged: true
             capabilities:
