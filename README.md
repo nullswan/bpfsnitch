@@ -21,7 +21,6 @@ bpfsnitch is an open-source, real-time monitoring tool for Linux systems and Kub
   - [Configuration (soon)](#configuration-soon)
     - [Customizing Syscall Monitoring](#customizing-syscall-monitoring)
       - [Predefined Syscalls](#predefined-syscalls)
-  - [Performance](#performance-1)
   - [Educational Value](#educational-value)
   - [License](#license)
   - [Future Plans](#future-plans)
