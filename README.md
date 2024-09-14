@@ -153,14 +153,6 @@ var WhitelistedSyscalls = []int{
     ...
 ```
 
-## Performance
-
-bpfsnitch is engineered to be lightweight and highly efficient, utilizing eBPF technology to minimize overhead. By monitoring syscalls and network events at the kernel level, it provides real-time insights without significantly impacting system performance.
-
-In our extensive testing across various Linux distributions and Kubernetes clusters, bpfsnitch exhibited minimal resource consumption and negligible performance impact. The eBPF programs it employs are optimized for efficiency, ensuring that monitoring activities do not interfere with normal system operations. Even in high-traffic production environments, bpfsnitch operates smoothly without causing any noticeable degradation.
-
-Typically, bpfsnitch consumes less than 1% of CPU resources and maintains a memory footprint ranging from 50 to 100 MB per node. These figures may vary based on system configuration, workload, and monitoring settings. We are committed to providing more detailed performance benchmarks and optimization tips in future releases to help you maximize the benefits of bpfsnitch.
-
 ## Educational Value
 
 bpfsnitch is not only a powerful monitoring tool but also an excellent educational resource. It provides insights into:
