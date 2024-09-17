@@ -19,7 +19,7 @@ build-docker:
 build-docker-multiarch:
 	docker buildx build \
 		--platform linux/amd64,linux/arm64,linux/arm/v7 \
-		-t nullswan/bpfsnitch:latest \
+		-t nullswan/bpfsnitch-dev:latest \
 		--push \
 		. -f deployments/Dockerfile
 
