@@ -70,6 +70,8 @@ func StartServer(log *slog.Logger, cancel context.CancelFunc, port uint64) {
 	}
 }
 
+const promPrefix = "bpfsnitch_"
+
 func RegisterMetrics() {
 	// Remove all builtin metrics that are produced by prometheus client.
 	// TODO: Remove promhttp_metric_handler_requests_total && promhttp_metric_handler_requests_in_flight
@@ -78,10 +80,16 @@ func RegisterMetrics() {
 		collectors.ProcessCollectorOpts{},
 	))
 
-	prometheus.MustRegister(SyscallCounter)
-	prometheus.MustRegister(DNSQueryCounter)
-	prometheus.MustRegister(NetworkReceivedBytesCounter)
-	prometheus.MustRegister(NetworkReceivedPacketsCounter)
-	prometheus.MustRegister(NetworkSentBytesCounter)
-	prometheus.MustRegister(NetworkSentPacketsCounter)
+	// Create a custom registerer with a prefix
+	registerer := prometheus.WrapRegistererWithPrefix(
+		promPrefix,
+		prometheus.DefaultRegisterer,
+	)
+
+	registerer.MustRegister(SyscallCounter)
+	registerer.MustRegister(DNSQueryCounter)
+	registerer.MustRegister(NetworkReceivedBytesCounter)
+	registerer.MustRegister(NetworkReceivedPacketsCounter)
+	registerer.MustRegister(NetworkSentBytesCounter)
+	registerer.MustRegister(NetworkSentPacketsCounter)
 }
