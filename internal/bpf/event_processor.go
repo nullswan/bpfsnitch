@@ -1,6 +1,7 @@
 package bpf
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/nullswan/bpfsnitch/internal/metrics"
@@ -53,11 +54,15 @@ func ProcessSyscallEvent(
 	container string,
 	log *slog.Logger,
 ) {
-	log.With("syscall", event.GetSyscallName()).
-		With("pid", event.Pid).
-		With("cgroup_id", event.CgroupID).
-		With("container", container).
-		Debug("Received syscall event")
+	// Check if debug logging is enabled for performance reasons
+	if log.Enabled(context.TODO(), slog.LevelDebug) {
+		log.
+			With("syscall", event.GetSyscallName()).
+			With("pid", event.Pid).
+			With("cgroup_id", event.CgroupID).
+			With("container", container).
+			Debug("Received syscall event")
+	}
 
 	metrics.SyscallCounter.WithLabelValues(event.GetSyscallName(), container).
 		Inc()
