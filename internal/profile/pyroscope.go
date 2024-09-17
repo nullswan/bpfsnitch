@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,7 +12,7 @@ import (
 func SetupProfiling(log *slog.Logger) error {
 	serverAddress := os.Getenv("PYROSCOPE_SERVER")
 	if serverAddress == "" {
-		return fmt.Errorf("PYROSCOPE_SERVER is not set")
+		return errors.New("PYROSCOPE_SERVER is not set")
 	}
 
 	user := os.Getenv("PYROSCOPE_USER")
@@ -24,7 +25,7 @@ func SetupProfiling(log *slog.Logger) error {
 		log.Warn("PYROSCOPE_PASSWORD is not set")
 	}
 
-	pyroscope.Start(pyroscope.Config{
+	_, err := pyroscope.Start(pyroscope.Config{
 		ApplicationName:   "bpfsnitch",
 		ServerAddress:     serverAddress,
 		BasicAuthUser:     user,
@@ -44,6 +45,9 @@ func SetupProfiling(log *slog.Logger) error {
 			pyroscope.ProfileBlockDuration,
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("failed to start pyroscope: %w", err)
+	}
 
 	return nil
 }
