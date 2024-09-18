@@ -29,8 +29,8 @@ func SetupHandler(
 			kp.Close()
 		}
 
-		bpfCtx.SyscallEventReader.Close()
-		bpfCtx.NetworkEventReader.Close()
+		bpfCtx.SyscallRingBuffer.Close()
+		bpfCtx.NetworkRingBuffer.Close()
 
 		log.Info("Closed event reader")
 	}()
