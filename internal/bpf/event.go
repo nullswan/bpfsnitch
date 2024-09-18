@@ -8,7 +8,6 @@ type Event interface {
 
 type SyscallEvent struct {
 	SyscallNr int64
-	Ts        uint64
 	CgroupID  uint64
 	Pid       uint64
 }
@@ -18,7 +17,6 @@ func (s SyscallEvent) GetSyscallName() string {
 }
 
 type NetworkEvent struct {
-	Ts       uint64
 	Pid      uint64
 	CgroupID uint64
 	Size     uint64
