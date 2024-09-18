@@ -20,16 +20,14 @@ int tracepoint_sys_enter(struct syscall_trace_enter_args *ctx) {
   }
   
   u32 pid = bpf_get_current_pid_tgid() >> 32;
-  u64 ts = bpf_ktime_get_ns();
   u64 cgroup_id = bpf_get_current_cgroup_id();
 
   struct syscall_event syscall_event = {
     .syscall_nr = ctx->syscall_nr,
-    .ts = ts,
     .cgroup_id = cgroup_id,
     .pid = pid
   };
 
-  bpf_perf_event_output(ctx, &syscall_events, BPF_F_CURRENT_CPU, &syscall_event, sizeof(syscall_event));
+  bpf_ringbuf_output(&network_events_rb, &syscall_event, sizeof(syscall_event), BPF_RB_NO_WAKEUP);
   return 0;
 }
