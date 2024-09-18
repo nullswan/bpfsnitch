@@ -50,7 +50,7 @@ int trace_udp_recvmsg(struct udp_recvmsg_args *ctx) {
   e.direction = 0;
   e.protocol = 17;
 
-  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_NO_WAKEUP);
+  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;
 }
 
@@ -101,6 +101,6 @@ int trace_udp_sendmsg(struct udp_sendmsg_args *ctx) {
   e.sport = sport;
   e.dport = dport;
 
-  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_NO_WAKEUP);
+  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;
 }

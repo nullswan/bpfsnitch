@@ -51,7 +51,7 @@ int trace_tcp_recvmsg(struct tcp_recvmsg_args *ctx) {
   e.direction = 0;
   e.protocol = 6;
 
-  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_NO_WAKEUP);
+  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;
 }
 
@@ -102,6 +102,6 @@ int trace_tcp_sendmsg(struct tcp_sendmsg_args *ctx) {
   e.direction = 1;
   e.protocol = 6;
 
-  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_NO_WAKEUP);
+  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;
 }

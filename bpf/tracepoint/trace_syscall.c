@@ -28,6 +28,6 @@ int tracepoint_sys_enter(struct syscall_trace_enter_args *ctx) {
     .pid = pid
   };
 
-  bpf_ringbuf_output(&network_events_rb, &syscall_event, sizeof(syscall_event), BPF_RB_NO_WAKEUP);
+  bpf_ringbuf_output(&syscall_events_rb, &syscall_event, sizeof(syscall_event), BPF_RB_FORCE_WAKEUP);
   return 0;
 }
