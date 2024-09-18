@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -11,7 +12,7 @@ import (
 func GetKernelVersion() (string, error) {
 	data, err := os.ReadFile("/proc/sys/kernel/osrelease")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read kernel version: %w", err)
 	}
 	version := strings.TrimSpace(string(data))
 	return version, nil
