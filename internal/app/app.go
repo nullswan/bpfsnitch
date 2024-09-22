@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
-	"strconv"
 
 	"github.com/nullswan/bpfsnitch/internal/bpf"
 	bpfarch "github.com/nullswan/bpfsnitch/internal/bpf/arch"
@@ -19,11 +18,12 @@ import (
 )
 
 const (
-	bpfProgramElf         = bpfarch.BpfProgramElf
-	cacheBannedSz         = 1000
-	cachePidToShaSz       = 1000
-	defaultPrometheusPort = 9090
-	minKernelVersion      = "5.8"
+	bpfProgramElf          = bpfarch.BpfProgramElf
+	cacheBannedSz          = 1000
+	cachePidToShaSz        = 1000
+	defaultPrometheusPort  = 9090
+	minKernelVersion       = "5.8"
+	defaultMountedProcPath = "/host_proc"
 )
 
 func Run(
@@ -42,8 +42,9 @@ func Run(
 		)
 	}
 
-	var kubernetesMode bool
-	flag.BoolVar(&kubernetesMode, "kubernetes", false, "Enable Kubernetes mode")
+	if !workload.IsSocketPresent() {
+		return errors.New("runtime socket not found")
+	}
 
 	var enablePprof bool
 	flag.BoolVar(&enablePprof, "pprof", false, "Enable pprof")
@@ -69,13 +70,6 @@ func Run(
 		}
 	}
 
-	if kubernetesMode {
-		if !workload.IsSocketPresent() {
-			return errors.New("runtime socket not found")
-		}
-		log.Info("Kubernetes mode enabled")
-	}
-
 	bpfCtx, err := bpf.Attach(log, bpfProgramElf)
 	if err != nil {
 		return fmt.Errorf("failed while attaching bpf: %w", err)
@@ -95,33 +89,23 @@ func Run(
 
 	go metrics.StartServer(log, cancel, prometheusPort)
 
+	deletedPodChan := make(chan string)
+	shaResolver, err := workload.NewShaResolver(log, deletedPodChan)
+	if err != nil {
+		return fmt.Errorf("failed to create sha resolver: %w", err)
+	}
 	syscallEventChan := make(chan *bpf.SyscallEvent)
 	networkEventChan := make(chan *bpf.NetworkEvent)
 	go bpf.ConsumeEvents(ctx, log, bpfCtx.SyscallRingBuffer, syscallEventChan)
 	go bpf.ConsumeEvents(ctx, log, bpfCtx.NetworkRingBuffer, networkEventChan)
 
-	var shaResolver *workload.ShaResolver
-	var deletedPodChan chan string
-	if kubernetesMode {
-		deletedPodChan = make(chan string)
-		shaResolver, err = workload.NewShaResolver(log, deletedPodChan)
-		if err != nil {
-			return fmt.Errorf("failed to create sha resolver: %w", err)
-		}
-
-		go deletePods(ctx, log, deletedPodChan)
-	}
+	go deletePods(ctx, log, deletedPodChan)
 
 	bannedCgroupIDs := lru.New[uint64, struct{}](cacheBannedSz)
 	pidToShaLRU := lru.New[uint64, string](cachePidToShaSz)
 
-	procPath := "/proc"
-	if kubernetesMode {
-		procPath = "/host_proc"
-	}
 	log.
-		With("proc_path", procPath).
-		With("kubernetes_mode", kubernetesMode).
+		With("proc_path", defaultMountedProcPath).
 		Info("Starting event processor")
 
 	for {
@@ -130,16 +114,13 @@ func Run(
 			log.Info("Context done, exiting")
 			return nil
 		case event := <-networkEventChan:
-			if !kubernetesMode {
-				continue
-			}
 			pod, err := workload.ResolvePod(
 				event.Pid,
 				event.CgroupID,
 				pidToShaLRU,
 				bannedCgroupIDs,
 				shaResolver,
-				procPath,
+				defaultMountedProcPath,
 				log,
 			)
 			if err != nil {
@@ -151,28 +132,24 @@ func Run(
 
 			bpf.ProcessNetworkEvent(event, pod, log)
 		case event := <-syscallEventChan:
-			if kubernetesMode {
-				pod, err := workload.ResolvePod(
-					event.Pid,
-					event.CgroupID,
-					pidToShaLRU,
-					bannedCgroupIDs,
-					shaResolver,
-					procPath,
-					log,
-				)
-				if err != nil {
-					if !errors.Is(err, workload.ErrCgroupIDBanned) {
-						log.With("error", err).
-							Debug("failed to resolve pod")
-					}
-					continue
+			pod, err := workload.ResolvePod(
+				event.Pid,
+				event.CgroupID,
+				pidToShaLRU,
+				bannedCgroupIDs,
+				shaResolver,
+				defaultMountedProcPath,
+				log,
+			)
+			if err != nil {
+				if !errors.Is(err, workload.ErrCgroupIDBanned) {
+					log.With("error", err).
+						Debug("failed to resolve pod")
 				}
-
-				bpf.ProcessSyscallEvent(event, pod, log)
-			} else {
-				bpf.ProcessSyscallEvent(event, strconv.FormatUint(event.Pid, 10), log)
+				continue
 			}
+
+			bpf.ProcessSyscallEvent(event, pod, log)
 		}
 	}
 }

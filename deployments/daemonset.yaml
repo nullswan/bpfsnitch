@@ -73,7 +73,6 @@ spec:
           imagePullPolicy: IfNotPresent
           args:
             - "./bpfsnitch"
-            - "-kubernetes"
           ports:
             - containerPort: 9090
               protocol: TCP
