@@ -48,6 +48,9 @@ func Run(
 	var enablePprof bool
 	flag.BoolVar(&enablePprof, "pprof", false, "Enable pprof")
 
+	var enableProfiling bool
+	flag.BoolVar(&enableProfiling, "profiling", false, "Enable profiling")
+
 	var prometheusPort uint64
 	flag.Uint64Var(
 		&prometheusPort,
@@ -57,6 +60,14 @@ func Run(
 	)
 
 	flag.Parse()
+
+	if enableProfiling {
+		log.Info("Profiling enabled")
+		err := profile.SetupProfiling(log)
+		if err != nil {
+			return fmt.Errorf("failed to setup profiling: %w", err)
+		}
+	}
 
 	if kubernetesMode {
 		if !workload.IsSocketPresent() {
