@@ -63,3 +63,27 @@ func (c *Cache[K, V]) Put(key K, value V) {
 	elem := c.list.PushFront(entry)
 	c.cache[key] = elem
 }
+
+// Remove removes the key from the cache.
+func (c *Cache[K, V]) Remove(key K) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if elem, found := c.cache[key]; found {
+		c.list.Remove(elem)
+		delete(c.cache, key)
+	}
+}
+
+// ForEach iterates over all elements in the cache and calls the given function for each element.
+func (c *Cache[K, V]) ForEach(fn func(key K, value V) bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	for elem := c.list.Front(); elem != nil; elem = elem.Next() {
+		p := elem.Value.(*pair[K, V])
+		if !fn(p.key, p.value) {
+			break
+		}
+	}
+}

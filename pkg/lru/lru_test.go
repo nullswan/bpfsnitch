@@ -242,3 +242,158 @@ func TestLRUCacheMultipleEvictions(t *testing.T) {
 		)
 	}
 }
+
+func TestLRUCacheRemove(t *testing.T) {
+	t.Parallel()
+
+	cache := New[int, int](2)
+
+	cache.Put(1, 100)
+	cache.Put(2, 200)
+
+	cache.Remove(1)
+
+	if _, found := cache.Get(1); found {
+		t.Errorf("Expected key 1 to be removed, but it was found")
+	}
+
+	if value, found := cache.Get(2); !found || value != 200 {
+		t.Errorf(
+			"Expected key 2 to have value 200, but got value %v found %v",
+			value,
+			found,
+		)
+	}
+
+	cache.Put(3, 300)
+
+	if value, found := cache.Get(3); !found || value != 300 {
+		t.Errorf(
+			"Expected key 3 to have value 300, but got value %v found %v",
+			value,
+			found,
+		)
+	}
+}
+
+func TestLRUCacheForEach(t *testing.T) {
+	t.Parallel()
+
+	cache := New[int, int](3)
+	cache.Put(1, 100)
+	cache.Put(2, 200)
+	cache.Put(3, 300)
+
+	// Expected order: 3 (MRU), 2, 1 (LRU)
+	expectedKeys := []int{3, 2, 1}
+	index := 0
+
+	cache.ForEach(func(key int, value int) bool {
+		if index >= len(expectedKeys) {
+			t.Errorf("Iterated over more elements than expected")
+			return false
+		}
+		expectedKey := expectedKeys[index]
+		if key != expectedKey {
+			t.Errorf(
+				"Expected key %v at index %v, but got key %v",
+				expectedKey,
+				index,
+				key,
+			)
+		}
+		index++
+		return true
+	})
+
+	if index != len(expectedKeys) {
+		t.Errorf(
+			"Expected to iterate over %v elements, but iterated over %v",
+			len(expectedKeys),
+			index,
+		)
+	}
+}
+
+func TestLRUCacheForEachEarlyExit(t *testing.T) {
+	t.Parallel()
+
+	cache := New[int, int](1)
+	cache.Put(1, 100)
+	cache.Put(2, 200)
+	cache.Put(3, 300)
+
+	// Expected to stop after first element
+	index := 0
+
+	cache.ForEach(func(key int, value int) bool {
+		index++
+		return false
+	})
+
+	if index != 1 {
+		t.Errorf(
+			"Expected to iterate over 1 element, but iterated over %v",
+			index,
+		)
+	}
+}
+
+func TestLRUCacheForEachEmptyCache(t *testing.T) {
+	t.Parallel()
+
+	cache := New[int, int](1)
+
+	called := false
+
+	cache.ForEach(func(key int, value int) bool {
+		called = true
+		return true
+	})
+
+	if called {
+		t.Errorf("Expected ForEach not to call the function on an empty cache")
+	}
+}
+
+func TestLRUCacheForEachAfterOperations(t *testing.T) {
+	t.Parallel()
+
+	cache := New[int, int](3)
+	cache.Put(1, 100) // [1]
+	cache.Put(2, 200) // [2, 1]
+	cache.Get(1)      // Make key 1 MRU [1, 2]
+	cache.Put(3, 300) // [3, 1, 2]
+	cache.Get(2)      // Now key 2 is MRU [2, 3, 1]
+	cache.Put(4, 400) // Evicts key 3 (LRU) [4, 2, 3]
+
+	// Expected order: 2 (MRU), 1, 4
+	expectedKeys := []int{4, 2, 3}
+	index := 0
+
+	cache.ForEach(func(key int, value int) bool {
+		if index >= len(expectedKeys) {
+			t.Errorf("Iterated over more elements than expected")
+			return false
+		}
+		expectedKey := expectedKeys[index]
+		if key != expectedKey {
+			t.Errorf(
+				"Expected key %v at index %v, but got key %v",
+				expectedKey,
+				index,
+				key,
+			)
+		}
+		index++
+		return true
+	})
+
+	if index != len(expectedKeys) {
+		t.Errorf(
+			"Expected to iterate over %v elements, but iterated over %v",
+			len(expectedKeys),
+			index,
+		)
+	}
+}
