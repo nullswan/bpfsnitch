@@ -20,8 +20,8 @@ func ProcessNetworkEvent(
 	event.Dport = network.Ntohs(event.Dport)
 
 	// Convert IP addresses to net.IP
-	saddr := network.IntToIP(event.Saddr)
-	daddr := network.IntToIP(event.Daddr)
+	saddr := network.IntToSubnet(event.Saddr, network.SubnetMask24)
+	daddr := network.IntToSubnet(event.Daddr, network.SubnetMask24)
 
 	if log.Enabled(context.TODO(), slog.LevelDebug) {
 		log.With("pid", event.Pid).
@@ -35,7 +35,7 @@ func ProcessNetworkEvent(
 			Debug("Received network event")
 	}
 
-	if event.Protocol == 17 && event.Direction == 0 && event.Dport == 53 {
+	if event.Protocol == 17 && event.Direction == 1 && event.Dport == 53 {
 		metrics.DNSQueryCounter.WithLabelValues(container).Inc()
 	}
 
