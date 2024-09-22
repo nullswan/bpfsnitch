@@ -101,11 +101,15 @@ func Run(
 	go bpf.ConsumeEvents(ctx, log, bpfCtx.NetworkRingBuffer, networkEventChan)
 
 	var shaResolver *workload.ShaResolver
+	var deletedPodChan chan string
 	if kubernetesMode {
-		shaResolver, err = workload.NewShaResolver()
+		deletedPodChan = make(chan string)
+		shaResolver, err = workload.NewShaResolver(log, deletedPodChan)
 		if err != nil {
 			return fmt.Errorf("failed to create sha resolver: %w", err)
 		}
+
+		go deletePods(ctx, log, deletedPodChan)
 	}
 
 	bannedCgroupIDs := lru.New[uint64, struct{}](cacheBannedSz)

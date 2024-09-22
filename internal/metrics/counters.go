@@ -49,3 +49,12 @@ var NetworkReceivedPacketsCounter = prometheus.NewCounterVec(
 	},
 	[]string{"pod", "remote_subnet"},
 )
+
+var PodBasedMetrics = []*prometheus.CounterVec{
+	DNSQueryCounter,
+	SyscallCounter,
+	NetworkReceivedBytesCounter,
+	NetworkSentBytesCounter,
+	NetworkSentPacketsCounter,
+	NetworkReceivedPacketsCounter,
+}
