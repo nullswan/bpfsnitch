@@ -288,7 +288,7 @@ func TestLRUCacheForEach(t *testing.T) {
 	expectedKeys := []int{3, 2, 1}
 	index := 0
 
-	cache.ForEach(func(key int, value int) bool {
+	cache.ForEach(func(key int, _ int) bool {
 		if index >= len(expectedKeys) {
 			t.Errorf("Iterated over more elements than expected")
 			return false
@@ -326,7 +326,7 @@ func TestLRUCacheForEachEarlyExit(t *testing.T) {
 	// Expected to stop after first element
 	index := 0
 
-	cache.ForEach(func(key int, value int) bool {
+	cache.ForEach(func(_ int, _ int) bool {
 		index++
 		return false
 	})
@@ -346,7 +346,7 @@ func TestLRUCacheForEachEmptyCache(t *testing.T) {
 
 	called := false
 
-	cache.ForEach(func(key int, value int) bool {
+	cache.ForEach(func(_ int, _ int) bool {
 		called = true
 		return true
 	})
@@ -371,7 +371,7 @@ func TestLRUCacheForEachAfterOperations(t *testing.T) {
 	expectedKeys := []int{4, 2, 3}
 	index := 0
 
-	cache.ForEach(func(key int, value int) bool {
+	cache.ForEach(func(key int, _ int) bool {
 		if index >= len(expectedKeys) {
 			t.Errorf("Iterated over more elements than expected")
 			return false
