@@ -2,6 +2,7 @@ package network
 
 import (
 	"net"
+	"reflect"
 	"testing"
 )
 
@@ -280,5 +281,80 @@ func TestNtohl(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestIntToSubnet(t *testing.T) {
+	tests := []struct {
+		ip     uint32
+		mask   uint32
+		output *net.IPNet
+	}{
+		{
+			ip:   0xC0A80101, // 192.168.1.1
+			mask: 0xFFFFFF00, // 255.255.255.0
+			output: &net.IPNet{
+				IP:   net.IPv4(192, 168, 1, 0),
+				Mask: net.IPv4Mask(255, 255, 255, 0),
+			},
+		},
+		{
+			ip:   0x0A000001, // 10.0.0.1
+			mask: 0xFF000000, // 255.0.0.0
+			output: &net.IPNet{
+				IP:   net.IPv4(10, 0, 0, 0),
+				Mask: net.IPv4Mask(255, 0, 0, 0),
+			},
+		},
+		{
+			ip:   0xC0A80101, // 192.168.1.1
+			mask: 0xFFFF0000, // 255.255.0.0
+			output: &net.IPNet{
+				IP:   net.IPv4(192, 168, 0, 0), // Host portion is zeroed out
+				Mask: net.IPv4Mask(255, 255, 0, 0),
+			},
+		},
+		{
+			ip:   0xC0A80101, // 192.168.1.1
+			mask: 0xFFFFFFFF, // 255.255.255.255
+			output: &net.IPNet{
+				IP:   net.IPv4(192, 168, 1, 1), // No part is zeroed out
+				Mask: net.IPv4Mask(255, 255, 255, 255),
+			},
+		},
+		{
+			ip:   0x0A0A0A0A, // 10.10.10.10
+			mask: 0xFFFFF000, // 255.255.240.0
+			output: &net.IPNet{
+				IP:   net.IPv4(10, 10, 0, 0), // Host portion is zeroed out
+				Mask: net.IPv4Mask(255, 255, 240, 0),
+			},
+		},
+		{
+			ip:   0xAC100202, // 172.16.2.2
+			mask: 0xFFFFFFF0, // 255.255.255.240
+			output: &net.IPNet{
+				IP: net.IPv4(
+					172,
+					16,
+					2,
+					0,
+				), // Host portion is mostly zeroed out
+				Mask: net.IPv4Mask(255, 255, 255, 240),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		result := IntToSubnet(tt.ip, tt.mask)
+		if !reflect.DeepEqual(result, tt.output) {
+			t.Errorf(
+				"IntToSubnet(%v, %v) = %v; want %v",
+				tt.ip,
+				tt.mask,
+				result,
+				tt.output,
+			)
+		}
 	}
 }
