@@ -15,18 +15,18 @@ func IntToIP(ip uint32) net.IP {
 
 func IntToSubnet(ip uint32, mask uint32) *net.IPNet {
 	ipMask := net.IPv4Mask(
-		byte(mask>>24),
-		byte(mask>>16),
-		byte(mask>>8),
+		byte(mask>>24), // nolint:mnd
+		byte(mask>>16), // nolint:mnd
+		byte(mask>>8),  // nolint:mnd
 		byte(mask),
 	)
 	maskLength, _ := ipMask.Size() // Get the mask length in bits
 
-	networkPart := ip & (0xFFFFFFFF << (32 - maskLength)) // Keep only the network part
+	networkPart := ip & (0xFFFFFFFF << (32 - maskLength)) // nolint:mnd
 	ipAddr := net.IPv4(
-		byte(networkPart>>24),
-		byte(networkPart>>16),
-		byte(networkPart>>8),
+		byte(networkPart>>24), // nolint:mnd
+		byte(networkPart>>16), // nolint:mnd
+		byte(networkPart>>8),  // nolint:mnd
 		byte(networkPart),
 	)
 	return &net.IPNet{
