@@ -285,6 +285,8 @@ func TestNtohl(t *testing.T) {
 }
 
 func TestIntToSubnet(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		ip     uint32
 		mask   uint32
