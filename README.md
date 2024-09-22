@@ -77,45 +77,47 @@ bpfsnitch exposes a variety of Prometheus metrics, providing insights into sysca
 ### Example Metrics Output
 
 ```perl
-# HELP dns_query_counter Number of DNS queries
-# TYPE dns_query_counter counter
-dns_query_counter{container="alpine-sandbox"} 23
+# HELP bpfsnitch_dns_query_counter Number of DNS queries
+# TYPE bpfsnitch_dns_query_counter counter
+bpfsnitch_dns_query_counter{container="kube-proxy-cwn8r"} 23
 
-# HELP network_received_bytes_counter Number of bytes received
-# TYPE network_received_bytes_counter counter
-network_received_bytes_counter{container="alpine-sandbox",remote_ip="127.0.0.53"} 492
-network_received_bytes_counter{container="alpine-sandbox",remote_ip="142.250.179.110"} 2529
-network_received_bytes_counter{container="alpine-sandbox",remote_ip="172.217.20.164"} 2541
+# HELP bpfsnitch_network_received_bytes_counter Number of bytes received
+# TYPE bpfsnitch_network_received_bytes_counter counter
+bpfsnitch_network_received_bytes_counter{pod="nginx-7b9f54988c-2tpbd",remote_subnet="0.0.0.0/24"} 1334512
 
-# HELP network_received_packets_counter Number of packets received
-# TYPE network_received_packets_counter counter
-network_received_packets_counter{container="alpine-sandbox",remote_ip="127.0.0.53"} 12
-network_received_packets_counter{container="alpine-sandbox",remote_ip="142.250.179.110"} 21
-network_received_packets_counter{container="alpine-sandbox",remote_ip="172.217.20.164"} 21
+# HELP bpfsnitch_network_received_packets_counter Number of packets received
+# TYPE bpfsnitch_network_received_packets_counter counter
+bpfsnitch_network_received_packets_counter{pod="nginx-7b9f54988c-2tpbd",remote_subnet="0.0.0.0/24"} 623
 
-# HELP network_sent_bytes_counter Number of bytes sent
-# TYPE network_sent_bytes_counter counter
-network_sent_bytes_counter{container="alpine-sandbox",remote_ip="127.0.0.53"} 94231
-network_sent_bytes_counter{container="alpine-sandbox",remote_ip="142.250.179.110"} 24160
-network_sent_bytes_counter{container="alpine-sandbox",remote_ip="172.217.20.164"} 81794
+# HELP bpfsnitch_network_sent_bytes_counter Number of bytes sent
+# TYPE bpfsnitch_network_sent_bytes_counter counter
+bpfsnitch_network_sent_packets_counter{pod="kube-proxy-cwn8r",remote_subnet="1.2.3.0/24"} 1293500
+bpfsnitch_network_sent_packets_counter{pod="kube-proxy-cwn8r",remote_subnet="1.2.97.0/24"} 80
+bpfsnitch_network_sent_packets_counter{pod="kube-proxy-cwn8r",remote_subnet="1.2.111.0/24"} 310
+bpfsnitch_network_sent_packets_counter{pod="kube-proxy-cwn8r",remote_subnet="1.2.108.0/24"} 65
 
-# HELP network_sent_packets_counter Number of packets sent
-# TYPE network_sent_packets_counter counter
-network_sent_packets_counter{container="alpine-sandbox",remote_ip="127.0.0.53"} 23
-network_sent_packets_counter{container="alpine-sandbox",remote_ip="142.250.179.110"} 80
-network_sent_packets_counter{container="alpine-sandbox",remote_ip="172.217.20.164"} 167
+# HELP bpfsnitch_network_sent_packets_counter Number of packets sent
+# TYPE bpfsnitch_network_sent_packets_counter counter
+bpfsnitch_network_sent_packets_counter{pod="kube-proxy-cwn8r",remote_subnet="1.2.3.0/24"} 1529
+bpfsnitch_network_sent_packets_counter{pod="kube-proxy-cwn8r",remote_subnet="1.2.97.0/24"} 1
+bpfsnitch_network_sent_packets_counter{pod="kube-proxy-cwn8r",remote_subnet="1.2.111.0/24"} 3
+bpfsnitch_network_sent_packets_counter{pod="kube-proxy-cwn8r",remote_subnet="1.2.108.0/24"} 1
 
-# HELP syscall_counter Number of syscalls
-# TYPE syscall_counter counter
-syscall_counter{container="alpine-sandbox",syscall="clone"} 3
-syscall_counter{container="alpine-sandbox",syscall="connect"} 28
-syscall_counter{container="alpine-sandbox",syscall="execve"} 3
-syscall_counter{container="alpine-sandbox",syscall="getsockopt"} 6
-syscall_counter{container="alpine-sandbox",syscall="recvfrom"} 270
-syscall_counter{container="alpine-sandbox",syscall="sendto"} 54
-syscall_counter{container="alpine-sandbox",syscall="setsockopt"} 30
-syscall_counter{container="alpine-sandbox",syscall="socket"} 31
-syscall_counter{container="alpine-sandbox",syscall="wait4"} 6
+# HELP bpfsnitch_syscall_counter Number of syscalls
+# TYPE bpfsnitch_syscall_counter counter
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="arch_prctl"} 520
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="bind"} 2713
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="clone"} 818
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="connect"} 264
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="getrandom"} 578
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="getsockname"} 2845
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="read"} 16424
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="recvmsg"} 56939
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="sendmsg"} 443
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="sendto"} 32007
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="setsockopt"} 819
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="socket"} 2845
+bpfsnitch_syscall_counter{pod="kube-proxy-cwn8r",syscall="wait4"} 818
 ```
 
 ## Performance
