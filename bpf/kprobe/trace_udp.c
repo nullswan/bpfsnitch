@@ -42,11 +42,11 @@ int trace_udp_recvmsg(struct udp_recvmsg_args *ctx) {
   struct network_event e = {};
   e.pid = pid;
   e.cgroup_id = cgroup_id;
+  e.size = size;
   e.saddr = saddr;
   e.daddr = daddr;
   e.sport = sport;
   e.dport = dport;
-  e.size = size;
   e.direction = DIRECTION_INBOUND;
   e.protocol = PROTOCOL_UDP;
 
@@ -92,14 +92,15 @@ int trace_udp_sendmsg(struct udp_sendmsg_args *ctx) {
   }
 
   struct network_event e = {};
-  e.direction = DIRECTION_OUTBOUND;
-  e.protocol = PROTOCOL_UDP;
   e.pid = pid;
   e.cgroup_id = cgroup_id;
+  e.size = size;
   e.saddr = saddr;
   e.daddr = daddr;
   e.sport = sport;
   e.dport = dport;
+  e.direction = DIRECTION_OUTBOUND;
+  e.protocol = PROTOCOL_UDP;
 
   bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;

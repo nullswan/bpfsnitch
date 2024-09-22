@@ -43,11 +43,11 @@ int trace_tcp_recvmsg(struct tcp_recvmsg_args *ctx) {
   struct network_event e = {};
   e.pid = pid;
   e.cgroup_id = cgroup_id;
+  e.size = size;
   e.saddr = saddr;
   e.daddr = daddr;
   e.sport = sport;
   e.dport = dport;
-  e.size = size;
   e.direction = DIRECTION_INBOUND;
   e.protocol = PROTOCOL_TCP;
 
@@ -94,11 +94,11 @@ int trace_tcp_sendmsg(struct tcp_sendmsg_args *ctx) {
   struct network_event e = {};
   e.pid = pid;
   e.cgroup_id = cgroup_id;
+  e.size = size;
   e.saddr = saddr;
   e.daddr = daddr;
   e.sport = sport;
   e.dport = dport;
-  e.size = size;
   e.direction = DIRECTION_OUTBOUND;
   e.protocol = PROTOCOL_TCP;
 
