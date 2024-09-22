@@ -114,13 +114,13 @@ spec:
               mountPath: /run/containerd/containerd.sock
               mountPropagation: HostToContainer
               readOnly: true
-          # resources:
-          #   limits:
-          #     memory: "250Mi"
-          #     cpu: "100m"
-          #   requests:
-          #     memory: "250Mi"
-          #     cpu: "100m"
+          resources:
+            limits:
+              memory: "250Mi"
+              cpu: "100m"
+            requests:
+              memory: "250Mi"
+              cpu: "100m"
       volumes:
         - name: bpf-maps
           hostPath:
