@@ -65,6 +65,7 @@ func NewShaResolver(
 	}, nil
 }
 
+// Resolve returns the pod name associated with a given container SHA.
 func (r *ShaResolver) Resolve(inputSha string) (string, error) {
 	sha := ContainerSha(inputSha)
 
@@ -86,6 +87,7 @@ func (r *ShaResolver) Resolve(inputSha string) (string, error) {
 	return v.PodName, nil
 }
 
+// UpdateCache updates the cache with the latest pod and container information.
 func (r *ShaResolver) UpdateCache() error {
 	ctx, cancel := context.WithTimeout(context.Background(), shaResolverTimeout)
 	defer cancel()
@@ -100,15 +102,12 @@ func (r *ShaResolver) UpdateCache() error {
 		currentPods[pod.Id] = pod
 	}
 
-	// Detect expired pods
 	r.detectExpiredPods(currentPods)
 
-	// Update knownPods with the current pods
 	r.knownPodsMutex.Lock()
 	r.knownPods = currentPods
 	r.knownPodsMutex.Unlock()
 
-	// Update container-to-pod mapping
 	containers, err := getContainers(ctx, r.client)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
@@ -118,7 +117,6 @@ func (r *ShaResolver) UpdateCache() error {
 		containerID := container.GetId()
 		podID := container.GetPodSandboxId()
 
-		// Get the pod from currentPods
 		pod, ok := currentPods[podID]
 		if !ok {
 			r.logger.Warn(
@@ -129,7 +127,6 @@ func (r *ShaResolver) UpdateCache() error {
 			continue
 		}
 
-		// Store container info in the cache
 		r.containerToPodInfo.Put(
 			ContainerSha(containerID),
 			&ContainerInfo{
@@ -141,6 +138,7 @@ func (r *ShaResolver) UpdateCache() error {
 	return nil
 }
 
+// detectExpiredPods detects pods that are no longer running and sends them to the expired pod channel.
 func (r *ShaResolver) detectExpiredPods(
 	currentPods map[string]*runtimeapi.PodSandbox,
 ) {
@@ -172,22 +170,21 @@ func (r *ShaResolver) detectExpiredPods(
 func (r *ShaResolver) removePodFromCache(podID string) {
 	keysToRemove := []ContainerSha{}
 
-	// Collect keys to remove
 	r.containerToPodInfo.ForEach(
 		func(containerID ContainerSha, info *ContainerInfo) bool {
 			if info.PodID == podID {
 				keysToRemove = append(keysToRemove, containerID)
 			}
-			return true // Continue iteration
+			return true
 		},
 	)
 
-	// Remove the collected keys
 	for _, key := range keysToRemove {
 		r.containerToPodInfo.Remove(key)
 	}
 }
 
+// Close closes the ShaResolver instance.
 func (r *ShaResolver) Close() {
 	r.conn.Close()
 }
