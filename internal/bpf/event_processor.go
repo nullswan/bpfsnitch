@@ -23,15 +23,17 @@ func ProcessNetworkEvent(
 	saddr := network.IntToIP(event.Saddr)
 	daddr := network.IntToIP(event.Daddr)
 
-	log.With("pid", event.Pid).
-		With("cgroup_id", event.CgroupID).
-		With("container", container).
-		With("saddr", saddr).
-		With("daddr", daddr).
-		With("sport", event.Sport).
-		With("dport", event.Dport).
-		With("size", event.Size).
-		Debug("Received network event")
+	if log.Enabled(context.TODO(), slog.LevelDebug) {
+		log.With("pid", event.Pid).
+			With("cgroup_id", event.CgroupID).
+			With("container", container).
+			With("saddr", saddr).
+			With("daddr", daddr).
+			With("sport", event.Sport).
+			With("dport", event.Dport).
+			With("size", event.Size).
+			Debug("Received network event")
+	}
 
 	if event.Protocol == 17 && event.Direction == 0 && event.Dport == 53 {
 		metrics.DNSQueryCounter.WithLabelValues(container).Inc()
