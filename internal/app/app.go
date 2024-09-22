@@ -118,7 +118,7 @@ func Run(
 			if !kubernetesMode {
 				continue
 			}
-			container, err := workload.ResolveContainer(
+			pod, err := workload.ResolvePod(
 				event.Pid,
 				event.CgroupID,
 				pidToShaLRU,
@@ -129,15 +129,15 @@ func Run(
 			)
 			if err != nil {
 				if !errors.Is(err, workload.ErrCgroupIDBanned) {
-					log.With("error", err).Debug("failed to resolve container")
+					log.With("error", err).Debug("failed to resolve pod")
 				}
 				continue
 			}
 
-			bpf.ProcessNetworkEvent(event, container, log)
+			bpf.ProcessNetworkEvent(event, pod, log)
 		case event := <-syscallEventChan:
 			if kubernetesMode {
-				container, err := workload.ResolveContainer(
+				pod, err := workload.ResolvePod(
 					event.Pid,
 					event.CgroupID,
 					pidToShaLRU,
@@ -149,12 +149,12 @@ func Run(
 				if err != nil {
 					if !errors.Is(err, workload.ErrCgroupIDBanned) {
 						log.With("error", err).
-							Debug("failed to resolve container")
+							Debug("failed to resolve pod")
 					}
 					continue
 				}
 
-				bpf.ProcessSyscallEvent(event, container, log)
+				bpf.ProcessSyscallEvent(event, pod, log)
 			} else {
 				bpf.ProcessSyscallEvent(event, strconv.FormatUint(event.Pid, 10), log)
 			}

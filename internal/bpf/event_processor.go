@@ -10,7 +10,7 @@ import (
 
 func ProcessNetworkEvent(
 	event *NetworkEvent,
-	container string,
+	pod string,
 	log *slog.Logger,
 ) {
 	// Adjust endianness if necessary
@@ -26,7 +26,7 @@ func ProcessNetworkEvent(
 	if log.Enabled(context.TODO(), slog.LevelDebug) {
 		log.With("pid", event.Pid).
 			With("cgroup_id", event.CgroupID).
-			With("container", container).
+			With("pod", pod).
 			With("saddr", saddr).
 			With("daddr", daddr).
 			With("sport", event.Sport).
@@ -38,24 +38,24 @@ func ProcessNetworkEvent(
 	if event.Protocol == NetworkEventProtocolUDP &&
 		event.Direction == NetworkEventDirectionOutbound &&
 		event.Dport == 53 {
-		metrics.DNSQueryCounter.WithLabelValues(container).Inc()
+		metrics.DNSQueryCounter.WithLabelValues(pod).Inc()
 	}
 
 	daddrStr := daddr.String()
 	if event.Direction == 0 {
-		metrics.NetworkSentBytesCounter.WithLabelValues(container, daddrStr).
+		metrics.NetworkSentBytesCounter.WithLabelValues(pod, daddrStr).
 			Add(float64(event.Size))
-		metrics.NetworkSentPacketsCounter.WithLabelValues(container, daddrStr).
+		metrics.NetworkSentPacketsCounter.WithLabelValues(pod, daddrStr).
 			Inc()
 	} else {
-		metrics.NetworkReceivedBytesCounter.WithLabelValues(container, daddrStr).Add(float64(event.Size))
-		metrics.NetworkReceivedPacketsCounter.WithLabelValues(container, daddrStr).Inc()
+		metrics.NetworkReceivedBytesCounter.WithLabelValues(pod, daddrStr).Add(float64(event.Size))
+		metrics.NetworkReceivedPacketsCounter.WithLabelValues(pod, daddrStr).Inc()
 	}
 }
 
 func ProcessSyscallEvent(
 	event *SyscallEvent,
-	container string,
+	pod string,
 	log *slog.Logger,
 ) {
 	// Check if debug logging is enabled for performance reasons
@@ -64,10 +64,10 @@ func ProcessSyscallEvent(
 			With("syscall", event.GetSyscallName()).
 			With("pid", event.Pid).
 			With("cgroup_id", event.CgroupID).
-			With("container", container).
+			With("pod", pod).
 			Debug("Received syscall event")
 	}
 
-	metrics.SyscallCounter.WithLabelValues(event.GetSyscallName(), container).
+	metrics.SyscallCounter.WithLabelValues(event.GetSyscallName(), pod).
 		Inc()
 }

@@ -17,7 +17,7 @@ var (
 	ErrCgroupIDNotContainer = errors.New("cgroup id is not container")
 )
 
-func ResolveContainer(
+func ResolvePod(
 	pid uint64,
 	cgroupID uint64,
 	pidToShaLRU *lru.Cache[uint64, string],
@@ -45,12 +45,12 @@ func ResolveContainer(
 		pidToShaLRU.Put(pid, sha)
 	}
 
-	container, err := shaResolver.Resolve(sha)
+	pod, err := shaResolver.Resolve(sha)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve sha: %w", err)
 	}
 
-	return container, nil
+	return pod, nil
 }
 
 var reKubeContainerd = regexp.MustCompile(`([a-f0-9]{64})\.scope`)

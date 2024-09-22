@@ -7,7 +7,7 @@ var DNSQueryCounter = prometheus.NewCounterVec(
 		Name: "dns_query_counter",
 		Help: "Number of DNS queries",
 	},
-	[]string{"container"},
+	[]string{"pod"},
 )
 
 var SyscallCounter = prometheus.NewCounterVec(
@@ -15,7 +15,7 @@ var SyscallCounter = prometheus.NewCounterVec(
 		Name: "syscall_counter",
 		Help: "Number of syscalls",
 	},
-	[]string{"syscall", "container"},
+	[]string{"syscall", "pod"},
 )
 
 var NetworkReceivedBytesCounter = prometheus.NewCounterVec(
@@ -23,7 +23,7 @@ var NetworkReceivedBytesCounter = prometheus.NewCounterVec(
 		Name: "network_received_bytes_counter",
 		Help: "Number of bytes received",
 	},
-	[]string{"container", "remote_subnet"},
+	[]string{"pod", "remote_subnet"},
 )
 
 var NetworkSentBytesCounter = prometheus.NewCounterVec(
@@ -31,7 +31,7 @@ var NetworkSentBytesCounter = prometheus.NewCounterVec(
 		Name: "network_sent_bytes_counter",
 		Help: "Number of bytes sent",
 	},
-	[]string{"container", "remote_subnet"},
+	[]string{"pod", "remote_subnet"},
 )
 
 var NetworkSentPacketsCounter = prometheus.NewCounterVec(
@@ -39,7 +39,7 @@ var NetworkSentPacketsCounter = prometheus.NewCounterVec(
 		Name: "network_sent_packets_counter",
 		Help: "Number of packets sent",
 	},
-	[]string{"container", "remote_subnet"},
+	[]string{"pod", "remote_subnet"},
 )
 
 var NetworkReceivedPacketsCounter = prometheus.NewCounterVec(
@@ -47,5 +47,5 @@ var NetworkReceivedPacketsCounter = prometheus.NewCounterVec(
 		Name: "network_received_packets_counter",
 		Help: "Number of packets received",
 	},
-	[]string{"container", "remote_subnet"},
+	[]string{"pod", "remote_subnet"},
 )
