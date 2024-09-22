@@ -6,13 +6,13 @@ import (
 	"encoding/binary"
 	"log/slog"
 
-	"github.com/cilium/ebpf/perf"
+	"github.com/cilium/ebpf/ringbuf"
 )
 
 func ConsumeEvents[T Event](
 	ctx context.Context,
 	log *slog.Logger,
-	evReader *perf.Reader,
+	evReader *ringbuf.Reader,
 	evCh chan *T,
 ) {
 	log.Info("Starting event reader")
@@ -29,24 +29,18 @@ func ConsumeEvents[T Event](
 				continue
 			}
 
-			if record.LostSamples > 0 {
-				log.With("lost_samples", record.LostSamples).
-					Warn("Lost samples")
-				continue
-			}
-
-			var ev T
+			ev := new(T)
 			err = binary.Read(
 				bytes.NewReader(record.RawSample),
 				binary.LittleEndian,
-				&ev,
+				ev,
 			)
 			if err != nil {
 				log.With("error", err).Error("Failed to decode event")
 				continue
 			}
 
-			evCh <- &ev
+			evCh <- ev
 		}
 	}
 }

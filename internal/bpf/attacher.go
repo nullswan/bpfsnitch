@@ -6,18 +6,14 @@ import (
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
+	"github.com/cilium/ebpf/ringbuf"
 	"github.com/cilium/ebpf/rlimit"
-)
-
-const (
-	perfReaderBufSz = 8192
 )
 
 // Define a Kernel BPF context.
 type KBContext struct {
-	SyscallEventReader *perf.Reader
-	NetworkEventReader *perf.Reader
+	SyscallRingBuffer *ringbuf.Reader
+	NetworkRingBuffer *ringbuf.Reader
 
 	Tps []link.Link
 	Kps []link.Link
@@ -53,36 +49,36 @@ func Attach(
 		)
 	}
 
-	syscallEventsReader, err := perf.NewReader(
-		coll.Maps["syscall_events"],
-		perfReaderBufSz,
+	syscallRingBuffer, err := ringbuf.NewReader(
+		coll.Maps["syscall_events_rb"],
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create perf reader: %w", err)
+		return nil, fmt.Errorf("failed to create ring buffer: %w", err)
 	}
 
-	networkEventsReader, err := perf.NewReader(
-		coll.Maps["network_events"],
-		perfReaderBufSz,
+	networkRingBuffer, err := ringbuf.NewReader(
+		coll.Maps["network_events_rb"],
 	)
 	if err != nil {
-		err := syscallEventsReader.Close()
-		if err != nil {
-			log.With("error", err).
-				Error("Failed to close perf reader")
+		err2 := syscallRingBuffer.Close()
+
+		if err2 != nil {
+			log.With("error", err2).
+				Error("Failed to close ring buffer")
 		}
-		return nil, fmt.Errorf("failed to create perf reader: %w", err)
+
+		return nil, fmt.Errorf("failed to create ring buffer: %w", err)
 	}
 
 	tps, err := attachTracepoints(log, coll)
 	if err != nil {
-		err2 := syscallEventsReader.Close()
+		err2 := syscallRingBuffer.Close()
 		if err2 != nil {
 			log.With("error", err2).
 				Error("Failed to close perf reader")
 		}
 
-		err2 = networkEventsReader.Close()
+		err2 = networkRingBuffer.Close()
 		if err2 != nil {
 			log.With("error", err2).
 				Error("Failed to close perf reader")
@@ -93,13 +89,13 @@ func Attach(
 
 	kps, err := attachKProbes(log, coll)
 	if err != nil {
-		err2 := syscallEventsReader.Close()
+		err2 := syscallRingBuffer.Close()
 		if err2 != nil {
 			log.With("error", err2).
 				Error("Failed to close perf reader")
 		}
 
-		err2 = networkEventsReader.Close()
+		err2 = networkRingBuffer.Close()
 		if err2 != nil {
 			log.With("error", err2).
 				Error("Failed to close perf reader")
@@ -113,9 +109,9 @@ func Attach(
 	}
 
 	return &KBContext{
-		SyscallEventReader: syscallEventsReader,
-		NetworkEventReader: networkEventsReader,
-		Tps:                tps,
-		Kps:                kps,
+		SyscallRingBuffer: syscallRingBuffer,
+		NetworkRingBuffer: networkRingBuffer,
+		Tps:               tps,
+		Kps:               kps,
 	}, nil
 }

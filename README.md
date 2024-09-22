@@ -44,10 +44,10 @@ bpfsnitch is an open-source, real-time monitoring tool for Linux systems and Kub
 
 ## Prerequisites
 
-- **Linux Kernel with eBPF Support**: bpfsnitch requires a Linux kernel version that supports eBPF (version 4.4 or higher recommended).
+- **Linux Kernel with eBPF Support**: bpfsnitch requires a Linux kernel version that supports eBPF (version 5.8 or higher recommended).
 - **eBPF Libraries**: Ensure that `libbpf` and related dependencies are installed.
 - **Prometheus**: For metrics scraping and monitoring.
-- **Container Runtime**: Supports Docker and Kubernetes environments.
+- **Container Runtime**: Supports Docker and Containerd Kubernetes environments.
 
 ---
 

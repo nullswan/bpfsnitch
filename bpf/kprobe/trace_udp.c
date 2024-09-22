@@ -10,7 +10,6 @@ struct udp_recvmsg_args {
 
 SEC("kprobe/udp_recvmsg")
 int trace_udp_recvmsg(struct udp_recvmsg_args *ctx) {
-  u64 ts = bpf_ktime_get_ns();
   u64 cgroup_id = bpf_get_current_cgroup_id();
   u32 pid = bpf_get_current_pid_tgid() >> 32;
 
@@ -41,7 +40,6 @@ int trace_udp_recvmsg(struct udp_recvmsg_args *ctx) {
   }
   
   struct network_event e = {};
-  e.ts = ts;
   e.pid = pid;
   e.cgroup_id = cgroup_id;
   e.saddr = saddr;
@@ -52,7 +50,7 @@ int trace_udp_recvmsg(struct udp_recvmsg_args *ctx) {
   e.direction = 0;
   e.protocol = 17;
 
-  bpf_perf_event_output(ctx, &network_events, BPF_F_CURRENT_CPU, &e, sizeof(e));
+  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;
 }
 
@@ -64,7 +62,6 @@ struct udp_sendmsg_args {
 
 SEC("kprobe/udp_sendmsg")
 int trace_udp_sendmsg(struct udp_sendmsg_args *ctx) {
-  u64 ts = bpf_ktime_get_ns();
   u64 cgroup_id = bpf_get_current_cgroup_id();
   u32 pid = bpf_get_current_pid_tgid() >> 32;
 
@@ -95,8 +92,6 @@ int trace_udp_sendmsg(struct udp_sendmsg_args *ctx) {
   }
 
   struct network_event e = {};
-
-  e.ts = ts;
   e.direction = 1;
   e.protocol = 17;
   e.pid = pid;
@@ -106,6 +101,6 @@ int trace_udp_sendmsg(struct udp_sendmsg_args *ctx) {
   e.sport = sport;
   e.dport = dport;
 
-  bpf_perf_event_output(ctx, &network_events, BPF_F_CURRENT_CPU, &e, sizeof(e));
+  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;
 }

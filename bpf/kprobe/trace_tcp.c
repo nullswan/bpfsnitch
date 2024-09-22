@@ -11,7 +11,6 @@ struct tcp_recvmsg_args {
 
 SEC("kprobe/tcp_recvmsg")
 int trace_tcp_recvmsg(struct tcp_recvmsg_args *ctx) {
-  u64 ts = bpf_ktime_get_ns();
   u64 cgroup_id = bpf_get_current_cgroup_id();
   u32 pid = bpf_get_current_pid_tgid() >> 32;
 
@@ -42,7 +41,6 @@ int trace_tcp_recvmsg(struct tcp_recvmsg_args *ctx) {
   }
 
   struct network_event e = {};
-  e.ts = ts;
   e.pid = pid;
   e.cgroup_id = cgroup_id;
   e.saddr = saddr;
@@ -53,7 +51,7 @@ int trace_tcp_recvmsg(struct tcp_recvmsg_args *ctx) {
   e.direction = 0;
   e.protocol = 6;
 
-  bpf_perf_event_output(ctx, &network_events, BPF_F_CURRENT_CPU, &e, sizeof(e));
+  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;
 }
 
@@ -65,7 +63,6 @@ struct tcp_sendmsg_args {
 
 SEC("kprobe/tcp_sendmsg")
 int trace_tcp_sendmsg(struct tcp_sendmsg_args *ctx) {
-  u64 ts = bpf_ktime_get_ns();
   u64 cgroup_id = bpf_get_current_cgroup_id();
   u32 pid = bpf_get_current_pid_tgid() >> 32;
   struct sock *sk = ctx->sk;
@@ -95,7 +92,6 @@ int trace_tcp_sendmsg(struct tcp_sendmsg_args *ctx) {
   }
 
   struct network_event e = {};
-  e.ts = ts;
   e.pid = pid;
   e.cgroup_id = cgroup_id;
   e.saddr = saddr;
@@ -106,6 +102,6 @@ int trace_tcp_sendmsg(struct tcp_sendmsg_args *ctx) {
   e.direction = 1;
   e.protocol = 6;
 
-  bpf_perf_event_output(ctx, &network_events, BPF_F_CURRENT_CPU, &e, sizeof(e));
+  bpf_ringbuf_output(&network_events_rb, &e, sizeof(e), BPF_RB_FORCE_WAKEUP);
   return 0;
 }
