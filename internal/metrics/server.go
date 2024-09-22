@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-
 func StartServer(log *slog.Logger, cancel context.CancelFunc, port uint64) {
 	http.Handle("/metrics", promhttp.Handler())
 
