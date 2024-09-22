@@ -27,6 +27,34 @@ type NetworkEvent struct {
 	Sport uint16
 	Dport uint16
 
-	Direction uint8
-	Protocol  uint8
+	Direction NetworkEventDirection
+	Protocol  NetworkEventProtocol
+}
+
+type NetworkEventDirection uint8
+
+const (
+	NetworkEventDirectionInbound  NetworkEventDirection = 0
+	NetworkEventDirectionOutbound NetworkEventDirection = 1
+)
+
+func (d NetworkEventDirection) String() string {
+	if d == NetworkEventDirectionInbound {
+		return "inbound"
+	}
+	return "outbound"
+}
+
+type NetworkEventProtocol uint8
+
+const (
+	NetworkEventProtocolTCP NetworkEventProtocol = 6
+	NetworkEventProtocolUDP NetworkEventProtocol = 17
+)
+
+func (p NetworkEventProtocol) String() string {
+	if p == NetworkEventProtocolTCP {
+		return "tcp"
+	}
+	return "udp"
 }

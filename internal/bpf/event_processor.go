@@ -35,7 +35,9 @@ func ProcessNetworkEvent(
 			Debug("Received network event")
 	}
 
-	if event.Protocol == 17 && event.Direction == 1 && event.Dport == 53 {
+	if event.Protocol == NetworkEventProtocolUDP &&
+		event.Direction == NetworkEventDirectionOutbound &&
+		event.Dport == 53 {
 		metrics.DNSQueryCounter.WithLabelValues(container).Inc()
 	}
 
