@@ -7,6 +7,12 @@
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_core_read.h>
 
+#define DIRECTION_INBOUND 0
+#define DIRECTION_OUTBOUND 1
+
+#define PROTOCOL_TCP 6
+#define PROTOCOL_UDP 17
+
 static inline int is_local_ip(__be32 ip);
 
 struct {
