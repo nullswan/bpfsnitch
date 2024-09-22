@@ -5,11 +5,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/nullswan/bpfsnitch/internal/bpf"
 	bpfarch "github.com/nullswan/bpfsnitch/internal/bpf/arch"
-	"github.com/nullswan/bpfsnitch/internal/logger"
+	"github.com/nullswan/bpfsnitch/internal/kernel"
 	"github.com/nullswan/bpfsnitch/internal/metrics"
 	"github.com/nullswan/bpfsnitch/internal/profile"
 	"github.com/nullswan/bpfsnitch/internal/sig"
@@ -22,9 +23,25 @@ const (
 	cacheBannedSz         = 1000
 	cachePidToShaSz       = 1000
 	defaultPrometheusPort = 9090
+	minKernelVersion      = "5.8"
 )
 
-func Run() error {
+func Run(
+	log *slog.Logger,
+) error {
+	kernelVersion, err := kernel.GetKernelVersion()
+	if err != nil {
+		return fmt.Errorf("failed to get kernel version: %w", err)
+	}
+
+	if kernel.CompareVersions(kernelVersion, minKernelVersion) < 0 {
+		return fmt.Errorf(
+			"kernel version %s is not supported, minimum is %s",
+			kernelVersion,
+			minKernelVersion,
+		)
+	}
+
 	var kubernetesMode bool
 	flag.BoolVar(&kubernetesMode, "kubernetes", false, "Enable Kubernetes mode")
 
@@ -43,8 +60,6 @@ func Run() error {
 	)
 
 	flag.Parse()
-
-	log := logger.Init()
 
 	if enableProfiling {
 		log.Info("Profiling enabled")
@@ -82,8 +97,8 @@ func Run() error {
 
 	syscallEventChan := make(chan *bpf.SyscallEvent)
 	networkEventChan := make(chan *bpf.NetworkEvent)
-	go bpf.ConsumeEvents(ctx, log, bpfCtx.SyscallEventReader, syscallEventChan)
-	go bpf.ConsumeEvents(ctx, log, bpfCtx.NetworkEventReader, networkEventChan)
+	go bpf.ConsumeEvents(ctx, log, bpfCtx.SyscallRingBuffer, syscallEventChan)
+	go bpf.ConsumeEvents(ctx, log, bpfCtx.NetworkRingBuffer, networkEventChan)
 
 	var shaResolver *workload.ShaResolver
 	if kubernetesMode {
@@ -114,7 +129,7 @@ func Run() error {
 			if !kubernetesMode {
 				continue
 			}
-			container, err := workload.ResolveContainer(
+			pod, err := workload.ResolvePod(
 				event.Pid,
 				event.CgroupID,
 				pidToShaLRU,
@@ -125,15 +140,15 @@ func Run() error {
 			)
 			if err != nil {
 				if !errors.Is(err, workload.ErrCgroupIDBanned) {
-					log.With("error", err).Debug("failed to resolve container")
+					log.With("error", err).Debug("failed to resolve pod")
 				}
 				continue
 			}
 
-			bpf.ProcessNetworkEvent(event, container, log)
+			bpf.ProcessNetworkEvent(event, pod, log)
 		case event := <-syscallEventChan:
 			if kubernetesMode {
-				container, err := workload.ResolveContainer(
+				pod, err := workload.ResolvePod(
 					event.Pid,
 					event.CgroupID,
 					pidToShaLRU,
@@ -145,12 +160,12 @@ func Run() error {
 				if err != nil {
 					if !errors.Is(err, workload.ErrCgroupIDBanned) {
 						log.With("error", err).
-							Debug("failed to resolve container")
+							Debug("failed to resolve pod")
 					}
 					continue
 				}
 
-				bpf.ProcessSyscallEvent(event, container, log)
+				bpf.ProcessSyscallEvent(event, pod, log)
 			} else {
 				bpf.ProcessSyscallEvent(event, strconv.FormatUint(event.Pid, 10), log)
 			}

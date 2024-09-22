@@ -37,17 +37,17 @@ bpfsnitch is an open-source, real-time monitoring tool for Linux systems and Kub
 - **Kubernetes Support**: Deployable as a DaemonSet to monitor your entire Kubernetes cluster.
 - **Customizable Syscall Monitoring**: Predefined list of critical syscalls with plans to provide a configurable syscall whitelist.
 - **Prometheus Integration**: Exposes metrics via a Prometheus scrape endpoint for easy integration with your monitoring stack.
-- **Container Awareness**: Labels metrics with container names for granular visibility.
+- **Pod Awareness**: Labels metrics with pod names for granular visibility.
 - **Open Source**: Released under the GPL license, encouraging community collaboration.
 
 ---
 
 ## Prerequisites
 
-- **Linux Kernel with eBPF Support**: bpfsnitch requires a Linux kernel version that supports eBPF (version 4.4 or higher recommended).
+- **Linux Kernel with eBPF Support**: bpfsnitch requires a Linux kernel version that supports eBPF (version 5.8 or higher recommended).
 - **eBPF Libraries**: Ensure that `libbpf` and related dependencies are installed.
 - **Prometheus**: For metrics scraping and monitoring.
-- **Container Runtime**: Supports Docker and Kubernetes environments.
+- **Container Runtime**: Supports Docker and Containerd Kubernetes environments.
 
 ---
 
@@ -69,10 +69,10 @@ bpfsnitch exposes a variety of Prometheus metrics, providing insights into sysca
 
 ### Key Metrics
 
-- Syscall Counters: Counts of specific syscalls made by processes or containers.
-- Network Bytes Counters: Total bytes sent and received, labeled by container and remote IP.
+- Syscall Counters: Counts of specific syscalls made by processes or pods.
+- Network Bytes Counters: Total bytes sent and received, labeled by pod and remote subnets.
 - Network Packets Counters: Total packets sent and received.
-- DNS Query Counters: Number of DNS queries made by containers.
+- DNS Query Counters: Number of DNS queries made by pods.
 
 ### Example Metrics Output
 

@@ -1,13 +1,17 @@
 package main
 
 import (
-	"log"
+	"os"
 
 	"github.com/nullswan/bpfsnitch/internal/app"
+	"github.com/nullswan/bpfsnitch/internal/logger"
 )
 
 func main() {
-	if err := app.Run(); err != nil {
-		log.Fatal(err)
+	log := logger.Init()
+
+	if err := app.Run(log); err != nil {
+		log.With("error", err).Error("Failed to run app")
+		os.Exit(1)
 	}
 }

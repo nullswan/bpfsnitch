@@ -2,6 +2,8 @@ package network
 
 import "net"
 
+const SubnetMask24 = 0xFFFFFF00 // nolint:mnd
+
 func IntToIP(ip uint32) net.IP {
 	return net.IPv4(
 		byte(ip>>24), // nolint:mnd
@@ -9,6 +11,25 @@ func IntToIP(ip uint32) net.IP {
 		byte(ip>>8),  // nolint:mnd
 		byte(ip),
 	)
+}
+
+func IntToSubnet(ip uint32, mask uint32) *net.IPNet {
+	ipAddr := net.IPv4(
+		byte(ip>>24), // nolint:mnd
+		byte(ip>>16), // nolint:mnd
+		byte(ip>>8),  // nolint:mnd
+		byte(ip),
+	)
+	ipMask := net.IPv4Mask(
+		byte(mask>>24), // nolint:mnd
+		byte(mask>>16), // nolint:mnd
+		byte(mask>>8),  // nolint:mnd
+		byte(mask),
+	)
+	return &net.IPNet{
+		IP:   ipAddr,
+		Mask: ipMask,
+	}
 }
 
 func Ntohs(val uint16) uint16 {

@@ -7,6 +7,12 @@
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_core_read.h>
 
+#define DIRECTION_INBOUND 0
+#define DIRECTION_OUTBOUND 1
+
+#define PROTOCOL_TCP 6
+#define PROTOCOL_UDP 17
+
 static inline int is_local_ip(__be32 ip);
 
 struct {
@@ -18,20 +24,11 @@ struct {
 
 struct syscall_event {
   long syscall_nr;
-  u64 ts;
   u64 cgroup_id;
   u64 pid;
 };
 
-struct {
-  __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-  __uint(key_size, sizeof(__u32));
-  __uint(value_size, sizeof(__u32));
-  __uint(max_entries, 8192);
-} syscall_events SEC(".maps");
-
 struct network_event {
-  u64 ts;
   u64 pid;
   u64 cgroup_id;
   u64 size;
@@ -47,8 +44,11 @@ struct network_event {
 };
 
 struct {
-  __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-  __uint(key_size, sizeof(__u32));
-  __uint(value_size, sizeof(__u32));
-  __uint(max_entries, 8192);
-} network_events SEC(".maps");
+  __uint(type, BPF_MAP_TYPE_RINGBUF);
+  __uint(max_entries, 1<<25); // 32MB
+} network_events_rb SEC(".maps");
+
+struct {
+  __uint(type, BPF_MAP_TYPE_RINGBUF);
+  __uint(max_entries, 1<<24); // 16MB
+} syscall_events_rb SEC(".maps");

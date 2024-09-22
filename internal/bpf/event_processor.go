@@ -10,7 +10,7 @@ import (
 
 func ProcessNetworkEvent(
 	event *NetworkEvent,
-	container string,
+	pod string,
 	log *slog.Logger,
 ) {
 	// Adjust endianness if necessary
@@ -20,38 +20,42 @@ func ProcessNetworkEvent(
 	event.Dport = network.Ntohs(event.Dport)
 
 	// Convert IP addresses to net.IP
-	saddr := network.IntToIP(event.Saddr)
-	daddr := network.IntToIP(event.Daddr)
+	saddr := network.IntToSubnet(event.Saddr, network.SubnetMask24)
+	daddr := network.IntToSubnet(event.Daddr, network.SubnetMask24)
 
-	log.With("pid", event.Pid).
-		With("cgroup_id", event.CgroupID).
-		With("container", container).
-		With("saddr", saddr).
-		With("daddr", daddr).
-		With("sport", event.Sport).
-		With("dport", event.Dport).
-		With("size", event.Size).
-		Debug("Received network event")
+	if log.Enabled(context.TODO(), slog.LevelDebug) {
+		log.With("pid", event.Pid).
+			With("cgroup_id", event.CgroupID).
+			With("pod", pod).
+			With("saddr", saddr).
+			With("daddr", daddr).
+			With("sport", event.Sport).
+			With("dport", event.Dport).
+			With("size", event.Size).
+			Debug("Received network event")
+	}
 
-	if event.Protocol == 17 && event.Direction == 0 && event.Dport == 53 {
-		metrics.DNSQueryCounter.WithLabelValues(container).Inc()
+	if event.Protocol == NetworkEventProtocolUDP &&
+		event.Direction == NetworkEventDirectionOutbound &&
+		event.Dport == 53 {
+		metrics.DNSQueryCounter.WithLabelValues(pod).Inc()
 	}
 
 	daddrStr := daddr.String()
 	if event.Direction == 0 {
-		metrics.NetworkSentBytesCounter.WithLabelValues(container, daddrStr).
+		metrics.NetworkSentBytesCounter.WithLabelValues(pod, daddrStr).
 			Add(float64(event.Size))
-		metrics.NetworkSentPacketsCounter.WithLabelValues(container, daddrStr).
+		metrics.NetworkSentPacketsCounter.WithLabelValues(pod, daddrStr).
 			Inc()
 	} else {
-		metrics.NetworkReceivedBytesCounter.WithLabelValues(container, daddrStr).Add(float64(event.Size))
-		metrics.NetworkReceivedPacketsCounter.WithLabelValues(container, daddrStr).Inc()
+		metrics.NetworkReceivedBytesCounter.WithLabelValues(pod, daddrStr).Add(float64(event.Size))
+		metrics.NetworkReceivedPacketsCounter.WithLabelValues(pod, daddrStr).Inc()
 	}
 }
 
 func ProcessSyscallEvent(
 	event *SyscallEvent,
-	container string,
+	pod string,
 	log *slog.Logger,
 ) {
 	// Check if debug logging is enabled for performance reasons
@@ -60,10 +64,10 @@ func ProcessSyscallEvent(
 			With("syscall", event.GetSyscallName()).
 			With("pid", event.Pid).
 			With("cgroup_id", event.CgroupID).
-			With("container", container).
+			With("pod", pod).
 			Debug("Received syscall event")
 	}
 
-	metrics.SyscallCounter.WithLabelValues(event.GetSyscallName(), container).
+	metrics.SyscallCounter.WithLabelValues(event.GetSyscallName(), pod).
 		Inc()
 }
