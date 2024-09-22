@@ -120,15 +120,13 @@ syscall_counter{container="alpine-sandbox",syscall="wait4"} 6
 
 ## Performance
 
-bpfsnitch is engineered to be lightweight and highly efficient, utilizing eBPF technology to minimize overhead. By monitoring syscalls and network events at the kernel level, it provides real-time insights without significantly impacting system performance.
+Starting from v0.1.0, bpfsnitch is built to be lightweight and efficient using eBPF technology. It monitors syscalls and network events at the kernel level, providing real-time insights with minimal system impact.
 
-In our extensive testing across various Linux distributions and Kubernetes clusters, bpfsnitch exhibited minimal resource consumption and negligible performance impact. The eBPF programs it employs are optimized for efficiency, ensuring that monitoring activities do not interfere with normal system operations. Even in high-traffic production environments, bpfsnitch operates smoothly without causing any noticeable degradation.
+In production, bpfsnitch typically uses an average of 5ms of CPU per 60-second scrape and maintains a memory footprint of up to `250MB`. It is statically bound to a maximum of `100ms` CPU usage, ensuring consistent performance regardless of system configuration or workload. See the [DaemonSet resources](https://github.com/search?q=repo%3Anullswan/bpfsnitch%20resources&type=code)
 
-Typically, bpfsnitch consumes less than 1% of a CPU and maintains a memory footprint ranging from 50 to 100 MB per node. These figures may vary based on system configuration, workload, and monitoring settings.
+To monitor bpfsnitch's performance in real-time, start it with the -pprof flag to expose a pprof server. Access live profiling data at the /debug/pprof route to analyze CPU and memory usage and optimize performance as needed.
 
-To help you monitor bpfsnitch's performance in real-time, you can expose a pprof server by starting bpfsnitch with the -pprof flag. This enables you to access live profiling data through the /debug/pprof route, allowing you to analyze CPU and memory usage on the fly. Utilizing pprof, you can gain deeper insights into bpfsnitch's resource consumption and optimize its performance according to your needs.
-
-Of course, we are committed to providing more detailed performance benchmarks and optimization tips in future releases to help you maximize the benefits of bpfsnitch.
+We are committed to providing detailed performance benchmarks and optimization tips in future releases to help you maximize bpfsnitch's benefits.
 
 ## Configuration (soon)
 
