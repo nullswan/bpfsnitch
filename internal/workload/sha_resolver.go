@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/nullswan/bpfsnitch/pkg/lru"
 	"google.golang.org/grpc"
@@ -12,82 +14,40 @@ import (
 
 const (
 	internalLRUCacheSize = 1000
+	shaResolverTimeout   = 5 * time.Second
 )
 
+// ContainerInfo stores information about a container's associated pod.
+type ContainerInfo struct {
+	PodID   string
+	PodName string
+}
+
+type ContainerSha string
+
 type ShaResolver struct {
-	containerShaToPodName *lru.Cache[string, string]
+	containerToPodInfo *lru.Cache[ContainerSha, *ContainerInfo]
 
 	logger *slog.Logger
 	client runtimeapi.RuntimeServiceClient
 	conn   *grpc.ClientConn
+
+	// Channel for expired pods
+	ExpiredPodChan chan string
+
+	// Map of known pod IDs to pod metadata
+	knownPods      map[string]*runtimeapi.PodSandbox
+	knownPodsMutex sync.Mutex
 }
 
-func (r *ShaResolver) Resolve(sha string) (string, error) {
-	v, ok := r.containerShaToPodName.Get(sha)
-	if ok {
-		return v, nil
-	}
-
-	err := r.UpdateCache()
-	if err != nil {
-		return "", fmt.Errorf("failed to update cache: %w", err)
-	}
-
-	v, ok = r.containerShaToPodName.Get(sha)
-	if !ok {
-		return "", fmt.Errorf("sha %s not found in cache", sha)
-	}
-
-	return v, nil
-}
-
-func (r *ShaResolver) UpdateCache() error {
-	ctx := context.Background()
-
-	pods, err := getPods(ctx, r.client)
-	if err != nil {
-		return fmt.Errorf("failed to list pods: %w", err)
-	}
-
-	podMap := make(map[string]*runtimeapi.PodSandbox)
-	for _, pod := range pods {
-		podMap[pod.Id] = pod
-	}
-
-	containers, err := getContainers(ctx, r.client)
-	if err != nil {
-		return fmt.Errorf("failed to list containers: %w", err)
-	}
-
-	for _, container := range containers {
-		containerPodID := container.GetPodSandboxId()
-		containerPod, ok := podMap[containerPodID]
-		if !ok {
-			r.logger.Warn(
-				"container %s has no associated pod",
-				"container_id",
-				container.GetId(),
-				"pod_id",
-				containerPodID,
-			)
-			continue
-		}
-
-		r.containerShaToPodName.Put(
-			container.GetId(),
-			containerPod.GetMetadata().GetName(),
-		)
-	}
-
-	return nil
-}
-
-func (r *ShaResolver) Close() {
-	r.conn.Close()
-}
-
-func NewShaResolver() (*ShaResolver, error) {
-	containerShaToPodName := lru.New[string, string](internalLRUCacheSize)
+// NewShaResolver creates a new ShaResolver instance.
+func NewShaResolver(
+	logger *slog.Logger,
+	expiredPodChan chan string,
+) (*ShaResolver, error) {
+	containerToPodInfo := lru.New[ContainerSha, *ContainerInfo](
+		internalLRUCacheSize,
+	)
 
 	client, conn, err := getRuntimeServiceClient()
 	if err != nil {
@@ -95,9 +55,139 @@ func NewShaResolver() (*ShaResolver, error) {
 	}
 
 	return &ShaResolver{
-		containerShaToPodName: containerShaToPodName,
-
-		client: client,
-		conn:   conn,
+		containerToPodInfo: containerToPodInfo,
+		client:             client,
+		conn:               conn,
+		logger:             logger,
+		ExpiredPodChan:     expiredPodChan,
+		knownPods:          make(map[string]*runtimeapi.PodSandbox),
+		knownPodsMutex:     sync.Mutex{},
 	}, nil
+}
+
+func (r *ShaResolver) Resolve(inputSha string) (string, error) {
+	sha := ContainerSha(inputSha)
+
+	v, ok := r.containerToPodInfo.Get(sha)
+	if ok {
+		return v.PodName, nil
+	}
+
+	err := r.UpdateCache()
+	if err != nil {
+		return "", fmt.Errorf("failed to update cache: %w", err)
+	}
+
+	v, ok = r.containerToPodInfo.Get(sha)
+	if !ok {
+		return "", fmt.Errorf("sha %s not found in cache", sha)
+	}
+
+	return v.PodName, nil
+}
+
+func (r *ShaResolver) UpdateCache() error {
+	ctx, cancel := context.WithTimeout(context.Background(), shaResolverTimeout)
+	defer cancel()
+
+	pods, err := getPods(ctx, r.client)
+	if err != nil {
+		return fmt.Errorf("failed to list pods: %w", err)
+	}
+
+	currentPods := make(map[string]*runtimeapi.PodSandbox)
+	for _, pod := range pods {
+		currentPods[pod.Id] = pod
+	}
+
+	// Detect expired pods
+	r.detectExpiredPods(currentPods)
+
+	// Update knownPods with the current pods
+	r.knownPodsMutex.Lock()
+	r.knownPods = currentPods
+	r.knownPodsMutex.Unlock()
+
+	// Update container-to-pod mapping
+	containers, err := getContainers(ctx, r.client)
+	if err != nil {
+		return fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	for _, container := range containers {
+		containerID := container.GetId()
+		podID := container.GetPodSandboxId()
+
+		// Get the pod from currentPods
+		pod, ok := currentPods[podID]
+		if !ok {
+			r.logger.Warn(
+				"container has no associated pod",
+				"container_id", containerID,
+				"pod_id", podID,
+			)
+			continue
+		}
+
+		// Store container info in the cache
+		r.containerToPodInfo.Put(
+			ContainerSha(containerID),
+			&ContainerInfo{
+				PodID:   podID,
+				PodName: pod.GetMetadata().GetName(),
+			},
+		)
+	}
+	return nil
+}
+
+func (r *ShaResolver) detectExpiredPods(
+	currentPods map[string]*runtimeapi.PodSandbox,
+) {
+	r.knownPodsMutex.Lock()
+	defer r.knownPodsMutex.Unlock()
+
+	for podID, pod := range r.knownPods {
+		if _, exists := currentPods[podID]; !exists {
+			r.logger.Info(
+				"Pod expired",
+				"pod_id",
+				podID,
+				"pod_name",
+				pod.GetMetadata().GetName(),
+			)
+
+			select {
+			case r.ExpiredPodChan <- podID:
+			default:
+				r.logger.Warn("Expired pod channel is full", "pod_id", podID)
+			}
+
+			r.removePodFromCache(podID)
+		}
+	}
+}
+
+// removePodFromCache removes all containers associated with a given pod ID from the cache.
+func (r *ShaResolver) removePodFromCache(podID string) {
+	keysToRemove := []ContainerSha{}
+
+	// Collect keys to remove
+	r.containerToPodInfo.ForEach(
+		func(containerID ContainerSha, info *ContainerInfo) bool {
+			if info.PodID == podID {
+				keysToRemove = append(keysToRemove, containerID)
+			}
+			return true // Continue iteration
+		},
+	)
+
+	// Remove the collected keys
+	for _, key := range keysToRemove {
+		r.containerToPodInfo.Remove(key)
+	}
+}
+
+func (r *ShaResolver) Close() {
+	r.conn.Close()
 }
